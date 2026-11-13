@@ -1,8 +1,8 @@
-# Unlogic — terror em primeira pessoa de Lógica Proposicional
+# Unlogic — um jogo de terror em primeira pessoa sobre Lógica Proposicional
 
-## Como rodar
+## Como rodar o jogo
 1. Descompacte o zip.
-2. Dê dois cliques em `index.html`. O jogo abre no navegador (Chrome, Edge ou Firefox).
+2. Dê dois cliques em `index.html`. O jogo abre no navegador (Chrome, Safari, Edge ou Firefox).
 
 Não precisa instalar nada nem ter internet: o Three.js vai junto, na pasta `vendor/`.
 A versão 2D original continua disponível em `classico.html`.
