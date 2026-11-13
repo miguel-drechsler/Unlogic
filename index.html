@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unlogic — terror de Lógica Proposicional</title>
+  <link rel="stylesheet" href="css/terror.css">
+</head>
+<body>
+  <!-- O canvas do Three.js é inserido aqui -->
+  <div id="palco"></div>
+
+  <!-- Efeitos de tela cheia -->
+  <div id="perigo"></div>
+  <div id="susto"></div>
+
+  <!-- HUD projetado sobre a cena -->
+  <div id="hud">
+    <div id="esquerda">
+      <div id="barra">
+        <div id="andar"></div>
+        <div class="linha"><span class="rotulo">ENERGIA</span><div id="bateria"></div></div>
+        <div id="chips"></div>
+      </div>
+      <canvas id="minimapa" width="432" height="432" aria-label="Minimapa"></canvas>
+    </div>
+
+    <div id="mira"></div>
+    <div id="dica"></div>
+    <div id="aviso" role="status"></div>
+
+    <div id="rodape">
+      <div id="folego"><span id="folegoNivel"></span></div>
+      <span>WASD andar · SHIFT correr · E / clique interagir · TAB tablet · M minimapa · ESC pausar</span>
+    </div>
+
+    <aside id="tablet" hidden>
+      <header><span>LAB-OS · TABLET</span><span class="ponto"></span></header>
+      <div id="tabletCorpo"></div>
+    </aside>
+  </div>
+
+  <!-- Menu / pausa -->
+  <section id="telaInicio" class="tela">
+    <div class="cartao inicio">
+      <header>
+        <h1 id="inicioTitulo">UNLOGIC</h1>
+        <p id="inicioSub" class="sub"></p>
+      </header>
+
+      <div class="paineis">
+        <section class="painel">
+          <h3>Objetivo</h3>
+          <ul>
+            <li>Cada <b>alavanca</b> é uma variável (<b class="v">V</b> ou <b class="f">F</b>). Virar uma gasta <b>1 de energia</b>.</li>
+            <li>Cada <b>porta</b> abre na hora em que a fórmula do painel fica verdadeira.</li>
+            <li>O <b>elevador</b> só libera com <b>todas</b> as portas abertas ao mesmo tempo.</li>
+          </ul>
+        </section>
+
+        <section class="painel alerta">
+          <h3>Perigo</h3>
+          <ul>
+            <li>Algo patrulha o andar e <b>ouve</b> cada alavanca virada.</li>
+            <li>Virada em falso deixa a criatura mais rápida.</li>
+            <li>Se a energia não der mais para abrir tudo, as luzes se apagam — e ela vem correndo.</li>
+          </ul>
+        </section>
+
+        <section class="painel">
+          <h3>Controles</h3>
+          <dl class="teclado">
+            <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>andar</dd>
+            <dt><kbd>Mouse</kbd></dt><dd>olhar</dd>
+            <dt><kbd>Shift</kbd></dt><dd>correr</dd>
+            <dt><kbd>E</kbd> ou clique</dt><dd>interagir</dd>
+            <dt><kbd>Tab</kbd></dt><dd>tablet</dd>
+            <dt><kbd>M</kbd></dt><dd>minimapa</dd>
+            <dt><kbd>Esc</kbd></dt><dd>pausar</dd>
+          </dl>
+        </section>
+      </div>
+
+      <footer class="inicio-base">
+        <div class="andares">
+          <div class="linha"><span class="rotulo">ANDAR</span><nav id="seletorFases" aria-label="Andares"></nav></div>
+          <p id="andarInfo"></p>
+        </div>
+        <button id="btnEntrar" class="botao primario">Entrar</button>
+      </footer>
+      <p class="nota"><a href="classico.html">Versão clássica 2D</a></p>
+    </div>
+  </section>
+
+  <!-- Vitória / resultado final -->
+  <section id="telaFim" class="tela" hidden>
+    <div class="cartao">
+      <h2 id="fimTitulo"></h2>
+      <div id="fimCorpo"></div>
+      <div id="fimAcoes" class="acoes"></div>
+    </div>
+  </section>
+
+  <!-- Three.js r147 embutido: funciona com dois cliques, sem internet -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/PointerLockControls.js"></script>
+
+  <script src="js/logica.js"></script>    <!-- motor lógico (intacto) -->
+  <script src="js/fases.js"></script>     <!-- as fases (intacto) -->
+  <script src="js/estado.js"></script>    <!-- regras em tempo real -->
+  <script src="js/labirinto.js"></script> <!-- mapa procedural + A* -->
+  <script src="js/texturas.js"></script>
+  <script src="js/som.js"></script>
+  <script src="js/mundo.js"></script>
+  <script src="js/jogador.js"></script>
+  <script src="js/monstro.js"></script>
+  <script src="js/minimapa.js"></script>
+  <script src="js/hud.js"></script>
+  <script src="js/jogo3d.js"></script>
+</body>
+</html>
