@@ -1,0 +1,264 @@
+:root {
+  --fundo: #ffffff;
+  --painel: #f5f5f5;
+  --borda: #d9d9d9;
+  --texto: #111111;
+  --apagado: #777777;
+  --falso-cor: #a6a6a6;
+  --verdadeiro: #1f9d55;
+  --falso: #d9443a;
+  --mono: ui-monospace, "JetBrains Mono", Consolas, "Courier New", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--sans);
+  min-height: 100vh;
+}
+
+/* Verdadeiro = verde, falso = vermelho. O texto V/F sempre acompanha. */
+.v { color: var(--verdadeiro); font-weight: 700; }
+.f { color: var(--falso); }
+
+/* ---------- Topo ---------- */
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--borda);
+  background: var(--fundo);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.marca h1 { margin: 0; font-size: 16px; letter-spacing: 3px; font-weight: 700; }
+
+.seletor-fases { display: flex; gap: 6px; }
+.fase-bolinha {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+  color: var(--apagado);
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+.fase-bolinha:hover { border-color: var(--texto); }
+.fase-bolinha.feita { border-color: var(--texto); color: var(--texto); }
+.fase-bolinha.atual { background: var(--texto); border-color: var(--texto); color: var(--fundo); }
+
+.placar { display: flex; gap: 24px; align-items: center; }
+.placar-item { display: flex; flex-direction: column; gap: 4px; }
+.rotulo { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--apagado); }
+.valor { font-family: var(--mono); font-size: 18px; }
+.energia { display: flex; gap: 3px; }
+.pip {
+  width: 10px; height: 18px;
+  border: 1px solid var(--texto);
+  background: var(--fundo);
+}
+.pip.cheio { background: var(--texto); }
+
+/* ---------- Laboratório ---------- */
+.laboratorio { max-width: 960px; margin: 0 auto; padding: 32px 24px; display: grid; gap: 36px; }
+
+.briefing-topo { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.etiqueta, .conceito { font-size: 12px; color: var(--apagado); text-transform: uppercase; letter-spacing: 1px; }
+.conceito::before { content: "· "; }
+.briefing h2 { margin: 6px 0 8px; font-size: 26px; font-weight: 600; }
+.briefing p { margin: 0; color: #444; line-height: 1.6; max-width: 70ch; }
+
+.secao-titulo { margin: 0 0 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--apagado); font-weight: 600; }
+.secao-titulo small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+/* ---------- Alavancas ---------- */
+.alavancas { display: flex; gap: 12px; flex-wrap: wrap; }
+.alavanca {
+  width: 88px;
+  padding: 14px 8px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  color: var(--texto);
+  cursor: pointer;
+  font-family: var(--mono);
+}
+.alavanca:hover:not(:disabled) { border-color: var(--texto); }
+.alavanca:focus-visible, .botao:focus-visible, .mini:focus-visible, .fase-bolinha:focus-visible {
+  outline: 2px solid var(--texto); outline-offset: 2px;
+}
+.alavanca:disabled { cursor: not-allowed; }
+.alavanca.presa { border-style: dashed; background: var(--painel); }
+.alavanca-nome { font-size: 22px; font-weight: 700; }
+.alavanca-trilho { position: relative; width: 56px; height: 58px; }
+.alavanca-trilho::after { /* base */
+  content: ""; position: absolute; bottom: 0; left: 10px; right: 10px; height: 9px;
+  border-radius: 5px 5px 2px 2px; background: var(--texto);
+}
+.alavanca-cabo { /* haste */
+  position: absolute; left: 50%; bottom: 5px;
+  width: 4px; height: 42px; margin-left: -2px;
+  border-radius: 2px; background: var(--texto);
+  transform-origin: 50% 100%;
+  transition: transform .25s cubic-bezier(.3, 1.6, .5, 1);
+}
+.alavanca-cabo::before { /* bola */
+  content: ""; position: absolute; top: -7px; left: 50%;
+  width: 16px; height: 16px; margin-left: -8px; border-radius: 50%;
+  transition: background .2s;
+}
+.ligada .alavanca-cabo { transform: rotate(-32deg); }
+.desligada .alavanca-cabo { transform: rotate(32deg); }
+.ligada .alavanca-cabo::before { background: var(--verdadeiro); }
+.desligada .alavanca-cabo::before { background: var(--falso); }
+.alavanca-valor { font-size: 14px; font-weight: 700; }
+.ligada .alavanca-valor { color: var(--verdadeiro); }
+.desligada .alavanca-valor { color: var(--falso); }
+.presa .alavanca-valor::after { content: " fixa"; font-weight: 400; color: var(--apagado); font-size: 11px; }
+
+/* ---------- Portas ---------- */
+.portas { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+.porta {
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  padding: 16px;
+  display: flex; gap: 28px; align-items: flex-start;
+}
+.porta.aberta { border-color: var(--texto); }
+.porta.selada { border-style: dashed; color: var(--apagado); }
+.porta-corpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+/* Desenho da porta: batente + folha que gira para abrir */
+.porta-desenho {
+  flex: none; position: relative;
+  width: 46px; height: 74px;
+  border: 2px solid var(--texto); border-bottom: none;
+  background: #e3f3ea; /* luz verde do outro lado */
+  perspective: 160px;
+}
+.folha {
+  position: absolute; inset: 0;
+  background: var(--fundo); border: 1.5px solid var(--texto);
+  transform-origin: 0 50%;
+  transition: transform .5s cubic-bezier(.4, 1.4, .6, 1);
+}
+.folha::after { /* maçaneta */
+  content: ""; position: absolute; right: 5px; top: 50%;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--texto);
+}
+.aberta .folha { transform: rotateY(-72deg); }
+.selada .porta-desenho { background: var(--painel); border-color: var(--falso-cor); }
+.selada .folha { /* porta tapada com tábuas em X */
+  border-color: var(--falso-cor);
+  background:
+    linear-gradient(to top right, transparent 47%, var(--falso-cor) 47% 53%, transparent 53%),
+    linear-gradient(to top left, transparent 47%, var(--falso-cor) 47% 53%, transparent 53%),
+    var(--fundo);
+}
+.selada .folha::after { display: none; }
+
+.porta-topo { display: flex; justify-content: space-between; align-items: center; }
+.porta-nome { font-weight: 600; font-size: 14px; }
+.selo { font-size: 11px; letter-spacing: 1px; color: var(--apagado); }
+.aberta .selo { color: var(--verdadeiro); font-weight: 700; }
+
+/* Fórmula com chaves de avaliação: cada subfórmula é sublinhada com o seu valor,
+   e os sublinhados se empilham como a árvore. O mais baixo é o resultado da porta. */
+.formula { margin: 0; font-family: var(--mono); font-size: 19px; line-height: 1.9; }
+.ramo {
+  display: inline-block;
+  padding: 0 2px 4px;
+  border-bottom: 2px solid;
+  line-height: 1.4;
+}
+.ramo.r-v { border-color: var(--verdadeiro); }
+.ramo.r-f { border-color: var(--falso); }
+.op { color: var(--texto); margin: 0 4px; }
+.selada .ramo { border-color: var(--falso-cor); }
+.selada .formula { text-decoration: line-through; color: var(--falso-cor); }
+.substituicao {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--apagado);
+  background: var(--painel);
+  border-radius: 4px;
+  padding: 6px 10px;
+}
+.val { font-weight: 700; }
+.igual { margin: 0 4px; }
+.porta-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Botões ---------- */
+.botao, .mini {
+  font-family: var(--sans);
+  border-radius: 4px;
+  border: 1px solid var(--borda);
+  background: var(--fundo);
+  color: var(--texto);
+  cursor: pointer;
+}
+.botao { padding: 9px 16px; font-size: 14px; }
+.botao:hover, .mini:hover:not(:disabled) { border-color: var(--texto); }
+.botao.primario { background: var(--texto); border-color: var(--texto); color: var(--fundo); }
+.botao.primario:hover { background: #333; }
+.botao.fantasma { border-color: transparent; color: var(--apagado); }
+.botao.fantasma:hover { color: var(--texto); border-color: transparent; text-decoration: underline; }
+.mini { padding: 5px 10px; font-size: 12px; color: var(--apagado); }
+.mini:hover:not(:disabled) { color: var(--texto); }
+.mini:disabled { opacity: .4; cursor: not-allowed; }
+.acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.aviso { min-height: 1.4em; margin: 0; font-family: var(--mono); font-size: 13px; color: var(--texto); }
+.aviso.ruim { color: var(--apagado); }
+.aviso.ruim::before { content: "× "; }
+
+/* ---------- Janelas ---------- */
+.janela {
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  padding: 24px 28px;
+  max-width: 540px;
+  width: calc(100% - 32px);
+}
+.janela::backdrop { background: #0006; }
+.janela h3 { margin-top: 0; font-size: 20px; font-weight: 600; }
+.janela p, .janela li { line-height: 1.6; color: #444; }
+.janela .acoes { margin-top: 20px; }
+.nota { font-size: 12px; color: var(--apagado) !important; }
+.formula-grande { font-family: var(--mono); font-size: 17px; color: var(--texto) !important; }
+.destaque { font-size: 22px; color: var(--texto); }
+
+.tabela-rolagem { max-height: 50vh; overflow: auto; }
+#tabela { border-collapse: collapse; font-family: var(--mono); width: 100%; font-size: 14px; }
+#tabela th, #tabela td { padding: 5px 12px; text-align: center; border-bottom: 1px solid var(--borda); }
+#tabela th { color: var(--apagado); font-weight: 400; position: sticky; top: 0; background: var(--fundo); }
+#tabela .col-resultado { border-left: 1px solid var(--texto); }
+#tabela tr.atual td { background: var(--painel); }
+#tabela tr.atual td:first-child { box-shadow: inset 3px 0 0 var(--texto); }
+
+.provas { font-family: var(--mono); font-size: 13px; padding-left: 18px; }
+.pontuacao { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pontuacao td { padding: 4px 0; color: #444; }
+.pontuacao td:last-child { text-align: right; font-family: var(--mono); }
+.pontuacao .soma td { border-top: 1px solid var(--texto); padding-top: 8px; color: var(--texto); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .topo { padding: 12px 16px; }
+  .laboratorio { padding: 24px 16px; gap: 28px; }
+  .alavanca { width: 76px; }
+  .formula { font-size: 16px; }
+}
