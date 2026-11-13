@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unlogic — um puzzle de Lógica Proposicional</title>
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">
+      <h1>ALAVANCAS</h1>
+    </div>
+    <nav class="seletor-fases" id="seletorFases" aria-label="Fases"></nav>
+    <div class="placar">
+      <div class="placar-item">
+        <span class="rotulo">Energia</span>
+        <div class="energia" id="energia" aria-live="polite"></div>
+      </div>
+      <div class="placar-item">
+        <span class="rotulo">Pontos</span>
+        <span class="valor" id="pontos">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="laboratorio">
+    <section class="briefing">
+      <div class="briefing-topo">
+        <span class="etiqueta" id="faseNumero">Fase 1</span>
+        <span class="conceito" id="faseConceito"></span>
+      </div>
+      <h2 id="faseTitulo"></h2>
+      <p id="faseTexto"></p>
+    </section>
+
+    <section class="painel">
+      <h3 class="secao-titulo">Painel de alavancas <small>(cada virada gasta 1 de energia)</small></h3>
+      <div class="alavancas" id="alavancas"></div>
+    </section>
+
+    <section>
+      <h3 class="secao-titulo">Portas <small>(abrem quando a fórmula é verdadeira)</small></h3>
+      <div class="portas" id="portas"></div>
+    </section>
+
+    <div class="acoes">
+      <button class="botao" id="btnReiniciar">Reiniciar fase</button>
+      <button class="botao fantasma" id="btnRegras">Como jogar</button>
+    </div>
+    <p class="aviso" id="aviso" role="status"></p>
+  </main>
+
+  <!-- Janela da tabela-verdade -->
+  <dialog id="dlgTabela" class="janela">
+    <h3 id="tabelaTitulo">Tabela-verdade</h3>
+    <p class="formula-grande" id="tabelaFormula"></p>
+    <div class="tabela-rolagem"><table id="tabela"></table></div>
+    <p class="nota">A linha destacada é a situação atual das alavancas.</p>
+    <form method="dialog"><button class="botao">Fechar</button></form>
+  </dialog>
+
+  <!-- Janela de vitória / derrota / regras -->
+  <dialog id="dlgMensagem" class="janela">
+    <h3 id="msgTitulo"></h3>
+    <div id="msgCorpo"></div>
+    <div class="acoes" id="msgAcoes"></div>
+  </dialog>
+
+  <script src="js/logica.js"></script>
+  <script src="js/fases.js"></script>
+  <script src="js/jogo.js"></script>
+</body>
+</html>
