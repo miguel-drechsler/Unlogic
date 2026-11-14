@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testes — Unlogic</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      padding: 28px;
+      background: #050b08;
+      color: #cfe9d8;
+      font: 14px/1.55 Consolas, "DejaVu Sans Mono", monospace;
+    }
+    h1 { margin: 0 0 6px; color: #35ff7a; font-size: 20px; letter-spacing: .12em; }
+    p { margin: 0 0 18px; color: #8aa99a; max-width: 90ch; }
+    pre {
+      margin: 0;
+      padding: 16px;
+      border: 1px solid #1d4a30;
+      background: #020604;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .ok { color: #35ff7a; }
+    .erro { color: #ff6b60; font-weight: bold; }
+    .resumo { margin-top: 16px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h1>UNLOGIC · TESTES</h1>
+  <p>Roda no navegador, sem Node.js. Testa o parser, as tabelas-verdade,
+  a classificação das fórmulas, o motor de regras e as fases do jogo.</p>
+  <pre id="saida">Rodando…</pre>
+
+  <script src="../js/logica.js"></script>
+  <script src="../js/fases.js"></script>
+  <script src="../js/estado.js"></script>
+  <script>
+  (() => {
+    const linhas = [];
+    let passou = 0, falhou = 0;
+
+    function teste(nome, condicao, detalhe = "") {
+      if (condicao) {
+        passou++;
+        linhas.push(`<span class="ok">OK</span>   ${nome}`);
+      } else {
+        falhou++;
+        linhas.push(`<span class="erro">FALHA</span> ${nome}${detalhe ? " — " + detalhe : ""}`);
+      }
+    }
+
+    const arvore = (texto) => Logica.ler(texto);
+    const avaliar = (texto, v) => Logica.avaliar(arvore(texto), v);
+    const val = (A, B, C) => ({ A, B, C });
+
+    // ---------- 1. Parser e precedência ----------
+    const valoresABC = [];
+    for (let m = 0; m < 8; m++) {
+      valoresABC.push(val(!!(m & 4), !!(m & 2), !!(m & 1)));
+    }
+    teste("precedência: A | B & C = A | (B & C)",
+      valoresABC.every((v) => avaliar("A | B & C", v) === avaliar("A | (B & C)", v)));
+    teste("precedência: (A | B) & C é diferente de A | B & C",
+      valoresABC.some((v) => avaliar("(A | B) & C", v) !== avaliar("A | B & C", v)));
+    teste("condicional associa à direita: A -> B -> C = A -> (B -> C)",
+      valoresABC.every((v) => avaliar("A -> B -> C", v) === avaliar("A -> (B -> C)", v)));
+    teste("negação liga mais forte: !A & B = (!A) & B",
+      valoresABC.every((v) => avaliar("!A & B", v) === avaliar("(!A) & B", v)));
+    teste("alias ^ para conjunção",
+      valoresABC.every((v) => avaliar("A ^ B", v) === avaliar("A & B", v)));
+
+    // ---------- 2. Tabela-verdade e classificação ----------
+    const tv = Logica.tabelaVerdade(arvore("A & B & C"));
+    teste("tabela-verdade tem 2^n linhas", tv.linhas.length === 8, `obtido: ${tv.linhas.length}`);
+    teste("primeira linha é toda V", tv.vars.every((n) => tv.linhas[0].valores[n] === true));
+    teste("tautologia: A | !A",
+      Logica.classificar(arvore("A | !A")) === "tautologia");
+    teste("contradição: A & !A",
+      Logica.classificar(arvore("A & !A")) === "contradicao");
+    teste("contingência: A -> B",
+      Logica.classificar(arvore("A -> B")) === "contingencia");
+    teste("silogismo hipotético é tautologia",
+      Logica.classificar(arvore("((A -> B) & (B -> C)) -> (A -> C)")) === "tautologia");
+
+    // ---------- 3. paraTexto preserva a semântica ----------
+    let textosOk = true;
+    let textosDetalhe = "";
+    FASES.forEach((fase, i) => {
+      fase.portas.forEach((texto) => {
+        const f = arvore(texto);
+        const devolta = arvore(Logica.paraTexto(f));
+        const vars = Logica.variaveis(f);
+        for (let m = 0; m < (1 << vars.length); m++) {
+          const v = {};
+          vars.forEach((n, k) => { v[n] = ((m >> k) & 1) === 1; });
+          if (Logica.avaliar(f, v) !== Logica.avaliar(devolta, v)) {
+            textosOk = false;
+            textosDetalhe = `fase ${i + 1}: ${texto}`;
+          }
+        }
+      });
+    });
+    teste("paraTexto não muda o significado de nenhuma porta", textosOk, textosDetalhe);
+
+    // ---------- 4. Subfórmulas ----------
+    const subs = Logica.subformulas(arvore("(A & B) | !A"));
+    const subsTexto = subs.map((f) => Logica.paraTexto(f));
+    teste("subformulas inclui operandos e conectivos",
+      ["A", "B", "A ∧ B", "¬A", "(A ∧ B) ∨ ¬A"].every((t) => subsTexto.includes(t)),
+      subsTexto.join(" | "));
+    teste("subformulas não repete", new Set(subsTexto).size === subsTexto.length);
+    teste("subformulas termina na fórmula inteira",
+      subsTexto[subsTexto.length - 1] === "(A ∧ B) ∨ ¬A");
+
+    // ---------- 5. Fases e regras ----------
+    teste("há fases cadastradas", FASES.length >= 5);
+    FASES.forEach((fase, i) => {
+      const e = Estado.criar(fase, i);
+      const nomes = Object.keys(fase.alavancas);
+      const livres = nomes.filter((n) => !fase.presas.includes(n));
+      const dist = (s) => nomes.filter((n) => s[n] !== e.valores[n]).length;
+      const minimo = Math.min(...e.solucoes.map(dist));
+
+      teste(`fase ${i + 1}: tem solução`, e.solucoes.length > 0);
+      teste(`fase ${i + 1}: o estado inicial não está resolvido`,
+        !Estado.venceu(e) && Estado.situacao(e) === "jogando");
+      teste(`fase ${i + 1}: a energia alcança o mínimo`, minimo <= fase.energia,
+        `mínimo ${minimo}, energia ${fase.energia}`);
+      teste(`fase ${i + 1}: nenhuma presa pode ser virada`,
+        fase.presas.every((n) => !Estado.virar(Estado.criar(fase, i), n).ok));
+
+      // Caminho ótimo: cada virada precisa ser considerada correta.
+      const alvo = e.solucoes.slice().sort((a, b) => dist(a) - dist(b))[0];
+      const viradas = nomes.filter((n) => alvo[n] !== e.valores[n]);
+      let todasBoas = true;
+      viradas.forEach((n) => {
+        const r = Estado.virar(e, n);
+        if (!r.ok || r.errada) todasBoas = false;
+      });
+      const contradicoes = e.portas.map((p, k) => (p.tipo === "contradicao" ? k : -1)).filter((k) => k >= 0);
+      contradicoes.forEach((k) => { if (!Estado.acusar(e, k).correto) todasBoas = false; });
+      teste(`fase ${i + 1}: o caminho ótimo vence sem viradas falsas`,
+        todasBoas && Estado.situacao(e) === "vitoria",
+        `situação: ${Estado.situacao(e)}`);
+      teste(`fase ${i + 1}: depois da vitória as alavancas travam`,
+        !Estado.virar(e, livres[0]).ok);
+
+      // Dependências: portasComVariavel concorda com o parser.
+      const depsOk = nomes.every((n) => {
+        const esperado = e.portas.map((p, k) => (Logica.variaveis(p.arvore).includes(n) ? k : -1)).filter((k) => k >= 0);
+        const obtido = Estado.portasComVariavel(e, n);
+        return esperado.length === obtido.length && esperado.every((k, j) => k === obtido[j]);
+      });
+      teste(`fase ${i + 1}: dependências das alavancas estão corretas`, depsOk);
+    });
+
+    // ---------- 6. Acusações ----------
+    {
+      const e = Estado.criar(FASES[0], 0);
+      const inocente = e.portas.findIndex((p) => p.tipo !== "contradicao");
+      const antes = e.energia;
+      const r = Estado.acusar(e, inocente);
+      teste("acusação errada custa 1 de energia e não sela",
+        !r.correto && e.energia === antes - 1 && !e.seladas.has(inocente));
+    }
+    {
+      const e = Estado.criar(FASES[3], 3);
+      const contradicao = e.portas.findIndex((p) => p.tipo === "contradicao");
+      const antes = e.energia;
+      const r = Estado.acusar(e, contradicao);
+      teste("acusação correta sela a contradição de graça",
+        r.correto && e.energia === antes && e.seladas.has(contradicao));
+    }
+
+    // ---------- 7. Apagão ----------
+    {
+      const e = Estado.criar(FASES[0], 0);
+      const nome = Object.keys(e.valores).find((n) => !e.fase.presas.includes(n));
+      let seguranca = 0;
+      while (Estado.situacao(e) === "jogando" && seguranca++ < 30) Estado.virar(e, nome);
+      teste("desperdiçar energia provoca apagão", Estado.situacao(e) === "apagao");
+      teste("no apagão não se vira mais alavanca", !Estado.virar(e, nome).ok);
+    }
+
+    // ---------- Resultado ----------
+    linhas.push("");
+    linhas.push(`<span class="${falhou ? "erro" : "ok"}">${passou} teste(s) passaram, ${falhou} falharam.</span>`);
+    const saida = document.getElementById("saida");
+    saida.innerHTML = linhas.join("\n");
+    saida.className = falhou ? "resumo erro" : "resumo ok";
+    console.log(`Unlogic: ${passou} passaram, ${falhou} falharam`);
+    if (falhou) console.error("Há testes falhando.");
+  })();
+  </script>
+</body>
+</html>

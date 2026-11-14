@@ -8,6 +8,8 @@
  *   - Acusar de "impossível" uma porta que não é contradição custa 1 de energia.
  *   - Consultar a tabela-verdade de uma porta custa pontos.
  *   - Quando a energia não alcança mais nenhuma solução: apagão (o monstro entra em fúria).
+ *   - Depois que o elevador é liberado, as alavancas travam: a valoração vencedora
+ *     não pode mais ser desfeita por um toque acidental.
  *
  * Tudo aqui pergunta ao motor lógico (logica.js); nada de lógica é refeito.
  */
@@ -21,15 +23,19 @@ const Estado = (() => {
 
   // ---------- Preparação ----------
   function criar(fase, indice = 0) {
+    const portas = fase.portas.map((texto) => {
+      const arvore = L.ler(texto);
+      return { arvore, tipo: L.classificar(arvore) };
+    });
     const e = {
       indice,
       fase,
       valores: { ...fase.alavancas },
       energia: fase.energia,
-      portas: fase.portas.map((texto) => {
-        const arvore = L.ler(texto);
-        return { arvore, tipo: L.classificar(arvore) };
-      }),
+      portas,
+      // Cache das variáveis de cada porta: usado pela dica "esta alavanca
+      // aparece nas portas ..." e por quem quiser montar dependências.
+      variaveisDasPortas: portas.map((p) => L.variaveis(p.arvore)),
       seladas: new Set(),
       tabelasVistas: new Set(),
       alavancasVistas: new Set(), // o que o jogador já encontrou no labirinto
@@ -67,6 +73,15 @@ const Estado = (() => {
     return Math.min(...e.solucoes.map((s) => nomes.filter((n) => s[n] !== e.valores[n]).length));
   }
 
+  // Índices das portas cuja fórmula menciona a variável `nome`.
+  // Serve para a dica de navegação ("a alavanca A aparece nas portas 1 e 4"),
+  // sem revelar o valor nem a solução.
+  function portasComVariavel(e, nome) {
+    return e.variaveisDasPortas
+      .map((vars, i) => (vars.includes(nome) ? i : -1))
+      .filter((i) => i >= 0);
+  }
+
   function retrato(e) {
     return {
       abertas: e.portas.filter((_, i) => portaResolvida(e, i)).length,
@@ -90,7 +105,9 @@ const Estado = (() => {
   // ---------- Jogadas ----------
   function virar(e, nome) {
     if (e.fase.presas.includes(nome)) return { ok: false, motivo: "presa" };
-    if (e.energia <= 0 || situacao(e) === "apagao") return { ok: false, motivo: "sem-energia" };
+    const agora = situacao(e);
+    if (agora === "vitoria") return { ok: false, motivo: "vitoria" };
+    if (e.energia <= 0 || agora === "apagao") return { ok: false, motivo: "sem-energia" };
     const antes = retrato(e);
     e.valores[nome] = !e.valores[nome];
     e.energia--;
@@ -101,13 +118,19 @@ const Estado = (() => {
 
   function acusar(e, i) {
     if (e.seladas.has(i)) return { ok: false, motivo: "ja-selada" };
+    const agora = situacao(e);
+    if (agora === "vitoria") return { ok: false, motivo: "vitoria" };
     const { tipo } = e.portas[i];
+    // Selar uma contradição é de graça e pode ser a última jogada mesmo com
+    // energia zero (o andar 5 termina exatamente assim).
     if (tipo === "contradicao") {
       e.seladas.add(i);
       return { ok: true, correto: true, tipo };
     }
+    // Já uma acusação errada precisa de energia para pagar o erro.
+    if (e.energia <= 0 || agora === "apagao") return { ok: false, motivo: "sem-energia" };
     e.erros++;
-    e.energia = Math.max(0, e.energia - 1);
+    e.energia--;
     return { ok: true, correto: false, tipo };
   }
 
@@ -143,6 +166,7 @@ const Estado = (() => {
   return {
     criar, virar, acusar, verTabela, situacao, venceu,
     portaAberta, portaResolvida, situacaoPorta, distanciaDaSolucao,
+    portasComVariavel,
     pontuacao, pontuacaoMaxima,
     PONTOS_BASE, BONUS_ENERGIA, CUSTO_TABELA, CUSTO_ERRO,
   };

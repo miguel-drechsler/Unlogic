@@ -52,7 +52,10 @@
   raio.far = 3; // só interage de perto
   const CENTRO_DA_TELA = new THREE.Vector2(0, 0);
   const frente = new THREE.Vector3();
-  const melhores = Array(FASES.length).fill(null);
+  const progresso = Progresso.carregar(FASES.length);
+  const melhores = progresso.melhores;
+  let modoEstudo = progresso.modoEstudo; // sem criatura: para estudar/apresentar
+  let mudo = progresso.mudo;
 
   let modo = "menu";
   let e, lab, mundo;
@@ -61,6 +64,25 @@
   let apagao = false, saidaLiberada = false;
   let relogio = 0, tempoSusto = 0;
   let visto, ultimoTile = -1; // névoa de exploração do minimapa
+  // Alguns navegadores/ambientes (iframe, preview, políticas de segurança) bloqueiam
+  // a Pointer Lock API. Nesse caso o jogo continua com "arrastar para olhar".
+  let semTrava = false;
+  let arrasto = null;
+  let tentativaTrava = null;
+
+  function salvarProgresso() {
+    Progresso.salvar({ melhores, modoEstudo, mudo });
+  }
+
+  // Reflete as preferências nos controles do menu e no HUD.
+  function atualizarOpcoes() {
+    $("modoEstudo").checked = modoEstudo;
+    $("somLigado").checked = !mudo;
+    const som = $("somEstado");
+    som.textContent = mudo ? "SOM MUDO" : "SOM LIGADO";
+    som.classList.toggle("mudo", mudo);
+    monstro.grupo.visible = !modoEstudo;
+  }
 
   function iniciarFase(indice) {
     if (mundo) mundo.descartar();
@@ -82,7 +104,9 @@
     alvo = null;
     tabletAberto = false;
     visao = { tipo: "geral" };
-    Hud.barra(e);
+    monstro.grupo.visible = !modoEstudo;
+    Hud.limparAviso();
+    Hud.barra(e, modoEstudo);
     Hud.tablet(e, false, visao);
     Hud.dica("");
     Hud.perigo(0);
@@ -98,12 +122,25 @@
       if (o.userData.interativo) { alvo = o.userData.interativo; break; }
     }
     if (!alvo) return Hud.dica("");
-    if (alvo.tipo === "terminal") return Hud.dica("[E] Usar o terminal — Protocolo IMPOSSÍVEL");
+    if (alvo.tipo === "terminal") {
+      return Hud.dica(saidaLiberada
+        ? "[E] Terminal — o elevador já está liberado"
+        : "[E] Usar o terminal — Protocolo IMPOSSÍVEL");
+    }
     const n = alvo.nome;
-    if (e.fase.presas.includes(n)) return Hud.dica(`Alavanca ${n} = ${VF(e.valores[n])} — PRESA (premissa)`);
-    Hud.dica(e.energia > 0
-      ? `[E] Virar alavanca ${n}: ${VF(e.valores[n])} → ${VF(!e.valores[n])}  (−1 energia)`
-      : `Alavanca ${n} = ${VF(e.valores[n])} — sem energia`);
+    // Dica de navegação: em quais portas já encontradas esta alavanca aparece.
+    // Não revela valores nem a solução; só ajuda a orientar o raciocínio.
+    const portas = Estado.portasComVariavel(e, n).filter((i) => e.portasVistas.has(i));
+    const onde = portas.length ? ` · aparece nas portas ${portas.map((i) => i + 1).join(", ")}` : "";
+    if (e.fase.presas.includes(n)) {
+      return Hud.dica(`Alavanca ${n} = ${VF(e.valores[n])} — PRESA (premissa)${onde}`);
+    }
+    if (saidaLiberada) {
+      return Hud.dica(`Alavanca ${n} = ${VF(e.valores[n])} — elevador liberado; siga para a saída`);
+    }
+    Hud.dica(e.energia > 0 && !apagao
+      ? `[E] Virar alavanca ${n}: ${VF(e.valores[n])} → ${VF(!e.valores[n])}  (−1 energia)${onde}`
+      : `Alavanca ${n} = ${VF(e.valores[n])} — sem energia${onde}`);
   }
 
   // ---------- Jogadas ----------
@@ -120,12 +157,17 @@
       Som.negado();
       return Hud.aviso(r.motivo === "presa"
         ? `A alavanca ${nome} está presa: é uma premissa.`
-        : "Sem energia: as alavancas travaram.", "ruim");
+        : r.motivo === "vitoria"
+          ? "O elevador já está liberado. Siga para a saída."
+          : "Sem energia: as alavancas travaram.", "ruim");
     }
     Som.clack();
-    monstro.ouvir(mundo.alavancas.find((a) => a.nome === nome).sup); // o barulho atrai a criatura
+    const a = mundo.alavancas.find((x) => x.nome === nome);
+    if (!modoEstudo && a) monstro.ouvir(a.sup); // o barulho atrai a criatura
     Hud.aviso(r.errada
-      ? `${nome} = ${VF(r.valor)}. Virada em falso — algo no escuro ficou mais rápido.`
+      ? (modoEstudo
+        ? `${nome} = ${VF(r.valor)}. Essa virada não aproxima o andar da solução.`
+        : `${nome} = ${VF(r.valor)}. Virada em falso — algo no escuro ficou mais rápido.`)
       : `Alavanca ${nome} agora vale ${VF(r.valor)}.`, r.errada ? "ruim" : "");
     depoisDaJogada();
   }
@@ -133,7 +175,11 @@
   function acusar(i) {
     if (!e.portasVistas.has(i)) return Hud.aviso(`Porta ${i + 1} ainda não foi encontrada.`, "ruim");
     const r = Estado.acusar(e, i);
-    if (!r.ok) return;
+    if (!r.ok) {
+      if (r.motivo === "vitoria") return Hud.aviso("O elevador já está liberado. Siga para a saída.", "bom");
+      if (r.motivo === "sem-energia") return Hud.aviso("Sem energia para acusar outra porta.", "ruim");
+      return;
+    }
     if (r.correto) {
       Som.acerto();
       Hud.aviso(`Correto! A porta ${i + 1} é uma contradição: falsa em todas as valorações. Selada.`, "bom");
@@ -154,7 +200,7 @@
       const perto = Math.min(...mudaram.map((p) => Math.hypot(centro(p.tile.x) - jogador.pos.x, centro(p.tile.z) - jogador.pos.z)));
       Som.porta(0.25 + 0.75 * limitar(1 - perto / 30));
     }
-    Hud.barra(e);
+    Hud.barra(e, modoEstudo);
     Hud.tablet(e, tabletAberto, visao);
 
     const situacao = Estado.situacao(e);
@@ -166,10 +212,14 @@
     if (situacao === "apagao" && !apagao) {
       apagao = true;
       Som.apagao();
-      setTimeout(Som.rugido, 1200);
-      Hud.aviso(e.energia === 0
-        ? "SEM ENERGIA. As luzes se apagaram. Ele está vindo."
-        : "A energia que resta não abre mais todas as portas. O sistema entrou em colapso. Ele está vindo.", "ruim");
+      if (modoEstudo) {
+        Hud.aviso("Sem energia para abrir as portas restantes. Aperte R para reiniciar o andar.", "ruim");
+      } else {
+        setTimeout(Som.rugido, 1200);
+        Hud.aviso(e.energia === 0
+          ? "SEM ENERGIA. As luzes se apagaram. Ele está vindo."
+          : "A energia que resta não abre mais todas as portas. O sistema entrou em colapso. Ele está vindo.", "ruim");
+      }
     }
   }
 
@@ -189,7 +239,9 @@
     for (const a of mundo.alavancas) {
       if (e.alavancasVistas.has(a.nome) || !vizinho(a.sup)) continue;
       e.alavancasVistas.add(a.nome);
-      Hud.aviso(`Alavanca ${a.nome} catalogada: vale ${VF(e.valores[a.nome])}${a.presa ? " e está presa (premissa)" : ""}.`);
+      const portas = Estado.portasComVariavel(e, a.nome).filter((i) => e.portasVistas.has(i));
+      const onde = portas.length ? ` Aparece nas portas ${portas.map((i) => i + 1).join(", ")}.` : "";
+      Hud.aviso(`Alavanca ${a.nome} catalogada: vale ${VF(e.valores[a.nome])}${a.presa ? " e está presa (premissa)" : ""}.${onde}`);
       novo = true;
     }
     mundo.portas.forEach((p, i) => {
@@ -198,7 +250,7 @@
       Hud.aviso(`Porta ${i + 1} catalogada no tablet (TAB).`);
       novo = true;
     });
-    if (novo) { Hud.barra(e); Hud.tablet(e, tabletAberto, visao); }
+    if (novo) { Hud.barra(e, modoEstudo); Hud.tablet(e, tabletAberto, visao); }
   }
 
   // Tile que o monstro deve perseguir. Se o jogador está encostado numa porta fechada,
@@ -239,27 +291,40 @@
     const alem = (pos.x - centro(s.x)) * (s.x - s.dentro.x) + (pos.z - centro(s.z)) * (s.z - s.dentro.z);
     if (tx === s.x && tz === s.z && alem > 0.3 && Estado.venceu(e)) return vencer();
 
-    const pegou = monstro.atualizar(dt, {
-      lab,
-      passavel: mundo.passavel,
-      jogador: pos,
-      tileJogador: tileAlvo(tx, tz),
-      furia: apagao,
-      erros: e.viradasErradas + e.erros,
-      aoPisar: (d) => Som.passoMonstro(limitar(1 - d / 18)),
-      aoAvistar: () => Som.rugido(),
+    camera.getWorldDirection(frente); // a seta do minimapa e o "lado" do som usam isso
+
+    let pegou = false;
+    let proximidade = 0;
+    if (!modoEstudo) {
+      pegou = monstro.atualizar(dt, {
+        lab,
+        passavel: mundo.passavel,
+        jogador: pos,
+        tileJogador: tileAlvo(tx, tz),
+        furia: apagao,
+        erros: e.viradasErradas + e.erros,
+        aoPisar: (d) => Som.passoMonstro(limitar(1 - d / 18)),
+        aoAvistar: () => Som.rugido(),
+      });
+
+      // Presença do monstro: respiração (com lado esquerdo/direito), vinheta e lanterna falhando.
+      const mx = monstro.grupo.position.x - pos.x, mz = monstro.grupo.position.z - pos.z;
+      const dist = Math.hypot(mx, mz) || 1;
+      proximidade = limitar(1 - dist / 16);
+      const lado = (mx * -frente.z + mz * frente.x) / dist; // produto escalar com o vetor "direita"
+      Som.monstro(proximidade, lado, monstro.modo === "caca");
+      Hud.perigo(proximidade * proximidade * (0.75 + 0.25 * Math.sin(relogio * 9)));
+    } else {
+      // Modo estudo: sem criatura, sem respiração e sem vinheta.
+      Som.monstro(0, 0, false);
+      Hud.perigo(0);
+    }
+
+    Minimapa.desenhar($("minimapa"), {
+      lab, visto, mundo, e, jogador: pos, frente,
+      monstro: modoEstudo ? null : monstro.grupo.position,
+      tempo: relogio,
     });
-
-    // Presença do monstro: respiração (com lado esquerdo/direito), vinheta e lanterna falhando.
-    const mx = monstro.grupo.position.x - pos.x, mz = monstro.grupo.position.z - pos.z;
-    const dist = Math.hypot(mx, mz) || 1;
-    const proximidade = limitar(1 - dist / 16);
-    camera.getWorldDirection(frente);
-    const lado = (mx * -frente.z + mz * frente.x) / dist; // produto escalar com o vetor "direita"
-    Som.monstro(proximidade, lado, monstro.modo === "caca");
-    Hud.perigo(proximidade * proximidade * (0.75 + 0.25 * Math.sin(relogio * 9)));
-
-    Minimapa.desenhar($("minimapa"), { lab, visto, mundo, e, jogador: pos, frente, monstro: monstro.grupo.position, tempo: relogio });
 
     const falha = Math.sin(relogio * 31) * Math.sin(relogio * 4.7) > 0.95 - 0.5 * proximidade;
     lanterna.intensity = apagao ? (falha ? 0.05 : 0.4) : (falha ? 0.45 : 1.5);
@@ -291,7 +356,7 @@
     Hud.aviso(semEnergia
       ? "Sem energia, no escuro, ele te achou. Pense antes de virar cada alavanca."
       : "A criatura te pegou. O andar foi reiniciado.", "ruim");
-    if (controles.isLocked || DEMO) modo = "jogando";
+    if (controles.isLocked || semTrava || DEMO) modo = "jogando";
     else pausar();
   }
 
@@ -303,7 +368,10 @@
     Hud.perigo(0);
     Hud.tablet(e, false, visao);
     const pts = Estado.pontuacao(e);
-    melhores[e.indice] = Math.max(melhores[e.indice] || 0, pts);
+    if (!modoEstudo) {
+      melhores[e.indice] = Math.max(melhores[e.indice] || 0, pts);
+      salvarProgresso(); // recorde persistente entre sessões
+    }
     if (controles.isLocked) controles.unlock(); // devolve o mouse para clicar nos botões
 
     const valoracao = Object.keys(e.valores)
@@ -314,11 +382,15 @@
     const { PONTOS_BASE, BONUS_ENERGIA, CUSTO_TABELA, CUSTO_ERRO } = Estado;
     const ultima = e.indice === FASES.length - 1;
     const repetir = ["Jogar este andar de novo", () => { iniciarFase(e.indice); entrar(); }];
+    const notaEstudo = modoEstudo
+      ? `<p class="nota">Modo estudo: esta pontuação não entra no recorde. Desmarque a opção no menu (Esc) para valer.</p>`
+      : "";
 
     Hud.telaFim(true, {
       titulo: `Andar −${e.indice + 1} vencido`,
       corpo: `
         <p>Valoração final: ${valoracao} · tempo ${Math.round(e.tempo)} s</p>
+        ${notaEstudo}
         <ul class="provas">${provas}</ul>
         <table class="pontuacao">
           <tr><td>Base</td><td>${PONTOS_BASE}</td></tr>
@@ -343,17 +415,101 @@
         <p>Pontuação total: <b class="v">${total}</b> de ${maximo} possíveis.</p>
         <p>Pontuação máxima = resolver cada andar com o mínimo de viradas, sem tabelas e sem
         acusações erradas: só raciocínio lógico.</p>`,
-      botoes: [["Recomeçar do andar −1", () => { melhores.fill(null); iniciarFase(0); entrar(); }]],
+      botoes: [["Recomeçar do andar −1", () => {
+        melhores.fill(null);
+        salvarProgresso();
+        iniciarFase(0);
+        entrar();
+      }]],
     });
   }
 
   // ---------- Menu, pausa e trava do mouse ----------
+  // Sem Pointer Lock, o olhar passa a ser por arrasto. O clique curto continua
+  // interagindo; o clique com arrasto só gira a câmera. Assim o jogo funciona
+  // também em iframes/previews que bloqueiam a trava do mouse.
+  function usarMouseLivre() {
+    clearTimeout(tentativaTrava);
+    tentativaTrava = null;
+    const primeiraVez = !semTrava;
+    semTrava = true;
+    arrasto = null;
+    document.body.classList.add("sem-trava");
+    document.body.classList.remove("arrastando");
+    if (modo === "menu" || modo === "pausado" || modo === "vitoria") {
+      modo = "jogando";
+      Hud.telaInicio(false);
+    }
+    if (primeiraVez) {
+      Hud.aviso("Este navegador bloqueou a trava do mouse. Arraste com o botão esquerdo (ou direito) para olhar; clique sem arrastar ou aperte E para interagir.", "bom");
+    }
+  }
+
+  function olharPorArrasto(dx, dy) {
+    const euler = new THREE.Euler(0, 0, 0, "YXZ");
+    euler.setFromQuaternion(camera.quaternion);
+    euler.y -= dx * 0.0025;
+    euler.x -= dy * 0.0025;
+    const limite = Math.PI / 2 - 0.02;
+    euler.x = Math.max(-limite, Math.min(limite, euler.x));
+    camera.quaternion.setFromEuler(euler);
+  }
+
+  document.addEventListener("pointerdown", (ev) => {
+    if (!semTrava || modo !== "jogando" || (ev.button !== 0 && ev.button !== 2)) return;
+    arrasto = { id: ev.pointerId, x: ev.clientX, y: ev.clientY, distancia: 0, botao: ev.button };
+    document.body.classList.add("arrastando");
+    try { ev.target.setPointerCapture(ev.pointerId); } catch { /* sem captura: segue o arrasto normal */ }
+    if (ev.button === 2) ev.preventDefault();
+  });
+
+  document.addEventListener("pointermove", (ev) => {
+    if (!semTrava || !arrasto || ev.pointerId !== arrasto.id) return;
+    const dx = ev.clientX - arrasto.x, dy = ev.clientY - arrasto.y;
+    if (!dx && !dy) return;
+    arrasto.x = ev.clientX;
+    arrasto.y = ev.clientY;
+    arrasto.distancia += Math.abs(dx) + Math.abs(dy);
+    olharPorArrasto(dx, dy);
+    ev.preventDefault();
+  });
+
+  document.addEventListener("pointerup", (ev) => {
+    if (!arrasto || ev.pointerId !== arrasto.id) return;
+    const { distancia, botao } = arrasto;
+    arrasto = null;
+    document.body.classList.remove("arrastando");
+    // Clique curto (sem arrastar) interage, como no modo com trava do mouse.
+    if (semTrava && modo === "jogando" && botao === 0 && distancia < 6) interagir();
+  });
+
+  document.addEventListener("pointercancel", () => {
+    arrasto = null;
+    document.body.classList.remove("arrastando");
+  });
+
+  document.addEventListener("contextmenu", (ev) => {
+    if (semTrava) ev.preventDefault(); // botão direito serve para olhar
+  });
+
   function entrar() {
     Som.iniciar();
     Hud.telaFim(false);
     if (DEMO) { modo = "jogando"; return Hud.telaInicio(false); }
+    if (semTrava || !document.body.requestPointerLock) { usarMouseLivre(); return; }
     modo = "pausado";
-    controles.lock(); // o evento "lock" é que coloca o jogo em "jogando"
+    try {
+      controles.lock(); // o evento "lock" é que coloca o jogo em "jogando"
+      // Se o evento de erro não vier (ou o pedido ficar pendente), não deixamos
+      // o jogador preso no menu: depois de 900 ms partimos para o arrasto.
+      clearTimeout(tentativaTrava);
+      tentativaTrava = setTimeout(() => {
+        tentativaTrava = null;
+        if (!controles.isLocked && modo === "pausado") usarMouseLivre();
+      }, 900);
+    } catch {
+      usarMouseLivre();
+    }
   }
 
   function pausar() {
@@ -362,12 +518,41 @@
   }
 
   controles.addEventListener("lock", () => {
+    clearTimeout(tentativaTrava);
+    tentativaTrava = null;
+    // Se a trava funcionou, encerra o modo de arrasto (o cursor volta a sumir).
+    if (semTrava) {
+      semTrava = false;
+      arrasto = null;
+      document.body.classList.remove("sem-trava", "arrastando");
+    }
     if (modo === "pausado" || modo === "menu") modo = "jogando";
     Hud.telaInicio(false);
   });
-  controles.addEventListener("unlock", () => { if (modo === "jogando") pausar(); });
-  document.addEventListener("pointerlockerror", () => { if (modo === "pausado") pausar(); });
+  controles.addEventListener("unlock", () => { if (!semTrava && modo === "jogando") pausar(); });
+  document.addEventListener("pointerlockerror", () => { if (!DEMO) usarMouseLivre(); });
   $("btnEntrar").onclick = entrar;
+
+  // Opções do menu (também aparecem na pausa). São persistidas no navegador.
+  $("modoEstudo").onchange = () => {
+    modoEstudo = $("modoEstudo").checked;
+    atualizarOpcoes();
+    salvarProgresso();
+    if (e) Hud.barra(e, modoEstudo);
+    if (modoEstudo) {
+      Som.monstro(0, 0, false);
+      Hud.perigo(0);
+      Hud.aviso("Modo estudo: a criatura foi desligada. O recorde não será alterado.", "bom");
+    } else {
+      Hud.aviso("A criatura está de volta ao andar.", "ruim");
+    }
+  };
+  $("somLigado").onchange = () => {
+    mudo = !$("somLigado").checked;
+    Som.definirMudo(mudo);
+    atualizarOpcoes();
+    salvarProgresso();
+  };
 
   // ---------- Teclado e mouse ----------
   function digito(n) {
@@ -383,12 +568,33 @@
   }
 
   document.addEventListener("keydown", (ev) => {
-    if (ev.code === "Tab") ev.preventDefault(); // não deixa o foco sair do jogo
+    // Fora do jogo, Tab continua servindo para navegar no menu por teclado.
+    if (ev.code === "Tab" && (modo === "jogando" || tabletAberto)) ev.preventDefault();
+    // Sem Pointer Lock o navegador não sai da trava sozinho no Esc: pausamos aqui.
+    if (ev.code === "Escape" && semTrava && modo === "jogando") { pausar(); return; }
     if (modo !== "jogando" || ev.repeat) return;
     if (ev.code === "Tab") {
       tabletAberto = !tabletAberto;
       visao = { tipo: "geral" };
       Hud.tablet(e, tabletAberto, visao);
+    } else if (ev.code === "KeyH") {
+      // Abre o tablet já na referência dos conectivos; H de novo volta.
+      if (!tabletAberto) {
+        tabletAberto = true;
+        visao = { tipo: "ajuda" };
+      } else {
+        visao = visao.tipo === "ajuda" ? { tipo: "geral" } : { tipo: "ajuda" };
+      }
+      Hud.tablet(e, tabletAberto, visao);
+    } else if (ev.code === "KeyR") {
+      // Reinício rápido do andar: útil no modo estudo e depois de um apagão.
+      iniciarFase(e.indice);
+      Hud.aviso("Andar reiniciado. A mesma valoração inicial de sempre.", "");
+    } else if (ev.code === "KeyK") {
+      mudo = Som.alternarMudo();
+      atualizarOpcoes();
+      salvarProgresso();
+      Hud.aviso(mudo ? "Som desligado." : "Som ligado.", "");
     } else if (ev.code === "KeyM") {
       $("minimapa").hidden = !$("minimapa").hidden;
     } else if (ev.code === "KeyE") {
@@ -402,7 +608,8 @@
     }
   });
   document.addEventListener("mousedown", (ev) => {
-    if (modo === "jogando" && ev.button === 0 && (controles.isLocked || DEMO)) interagir();
+    // Com arrasto para olhar, quem decide se foi clique ou arrasto é o pointerup.
+    if (!semTrava && modo === "jogando" && ev.button === 0 && (controles.isLocked || DEMO)) interagir();
   });
 
   // ---------- Laço principal ----------
@@ -423,9 +630,16 @@
   }
 
   if (DEMO) { // acesso pelo console para depurar: depurar.e, depurar.lab, depurar.jogador...
-    window.depurar = { jogador, monstro, camera, iniciarFase, get e() { return e; }, get lab() { return lab; }, get mundo() { return mundo; }, get modo() { return modo; } };
+    window.depurar = {
+      jogador, monstro, camera, iniciarFase,
+      get e() { return e; }, get lab() { return lab; }, get mundo() { return mundo; },
+      get modo() { return modo; }, get modoEstudo() { return modoEstudo; },
+      get melhores() { return melhores; },
+    };
   }
 
+  Som.definirMudo(mudo);
+  atualizarOpcoes();
   iniciarFase(0);
   Hud.telaInicio(true, {
     titulo: "UNLOGIC",

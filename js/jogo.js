@@ -77,12 +77,31 @@
     depoisDaJogada();
   }
 
+  // Menor número de viradas que ainda leva a uma solução. Contradições não
+  // seladas podem ser seladas de graça no terminal, então não entram na conta.
+  // Se não houver solução possível, devolve Infinity.
+  function distanciaMinima() {
+    const portas = estado.portas.filter((p, i) => !estado.seladas.has(i) && p.tipo !== "contradicao");
+    const livres = Object.keys(estado.valores).filter((n) => !estado.fase.presas.includes(n));
+    let minimo = Infinity;
+    for (let m = 0; m < 1 << livres.length; m++) {
+      const v = { ...estado.valores };
+      livres.forEach((n, k) => { v[n] = ((m >> k) & 1) === 1; });
+      if (portas.every((p) => Logica.avaliar(p.arvore, v))) {
+        minimo = Math.min(minimo, livres.filter((n) => v[n] !== estado.valores[n]).length);
+      }
+    }
+    return minimo;
+  }
+
   function depoisDaJogada() {
     desenhar();
     if (venceu()) {
       estado.terminou = true;
       setTimeout(mostrarVitoria, 450);
-    } else if (estado.energia === 0) {
+    } else if (estado.energia < distanciaMinima()) {
+      // Mesmo com energia sobrando, pode não haver mais como abrir tudo:
+      // avisa na hora em vez de deixar o jogador tentando à toa.
       estado.terminou = true;
       setTimeout(mostrarDerrota, 450);
     }
@@ -284,8 +303,13 @@
   }
 
   function mostrarDerrota() {
+    const falta = distanciaMinima();
+    const situacao = falta === Infinity
+      ? "Não existe mais valoração capaz de abrir todas as portas."
+      : `Ainda faltavam <b>${falta}</b> virada(s) e restam <b>${estado.energia}</b> de energia.`;
     janela("Sem energia!", `
       <p>As alavancas travaram antes de todas as portas abrirem.</p>
+      <p>${situacao}</p>
       <p>Dica: antes de virar uma alavanca, avalie o que acontece com <b>todas</b> as portas.
       A tabela-verdade custa pontos, mas pode economizar energia.</p>`,
       [["Tentar de novo", () => iniciarFase(estado.indice), "primario"]]);
@@ -309,12 +333,14 @@
       <ul>
         <li>A porta <b>abre</b> quando a fórmula é verdadeira com os valores atuais.</li>
         <li>Para vencer, <b>todas</b> as portas precisam estar abertas ao mesmo tempo.</li>
-        <li>Virar uma alavanca gasta <b>1 de energia</b>. Sem energia, a fase acaba.</li>
+        <li>Virar uma alavanca gasta <b>1 de energia</b>. Se a energia restante não
+          alcançar mais nenhuma solução, a fase acaba na hora.</li>
         <li><b>Tabela-verdade</b>: mostra todas as combinações da porta (custa ${CUSTO_TABELA} pontos).</li>
         <li><b>Impossível!</b>: se a porta for uma contradição, ela é selada.
           Se não for, você perde 1 de energia.</li>
         <li>Alavancas tracejadas (fixas) estão presas: são premissas.</li>
-        <li>Atalho: aperte a letra da alavanca no teclado para virá-la.</li>
+        <li>Atalho: aperte a letra da alavanca no teclado para virá-la;
+          aperte <b>R</b> para reiniciar a fase.</li>
       </ul>
       <p class="nota">¬ não · ∧ e · ∨ ou · → se...então · ↔ se e somente se</p>`,
       [["Entendi", null, "primario"]]);
@@ -325,6 +351,7 @@
   $("btnRegras").onclick = mostrarRegras;
   document.addEventListener("keydown", (e) => {
     if (document.querySelector("dialog[open]") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.code === "KeyR") return iniciarFase(estado.indice);
     const letra = e.key.toUpperCase();
     if (letra in estado.valores) virarAlavanca(letra);
   });

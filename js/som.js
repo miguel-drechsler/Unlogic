@@ -6,14 +6,15 @@
  */
 const Som = (() => {
   let ctx = null, mestre, bufferRuido, respiracao, respiracaoPan, respiracaoLfo;
+  let mudo = false;
 
   function iniciar() {
-    if (ctx) { ctx.resume(); return; }
+    if (ctx) { ctx.resume(); aplicarVolume(); return; }
     const Classe = window.AudioContext || window.webkitAudioContext;
     if (!Classe) return;
     ctx = new Classe();
     mestre = ctx.createGain();
-    mestre.gain.value = 0.8;
+    mestre.gain.value = mudo ? 0 : 0.8;
     mestre.connect(ctx.destination);
 
     bufferRuido = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -22,6 +23,23 @@ const Som = (() => {
 
     zumbidoAmbiente();
     respiracaoDoMonstro();
+  }
+
+  function aplicarVolume() {
+    if (!ctx || !mestre) return;
+    mestre.gain.setTargetAtTime(mudo ? 0 : 0.8, ctx.currentTime, 0.04);
+  }
+
+  // Pode ser chamado antes de iniciar(): a preferência fica guardada e é
+  // aplicada quando o áudio for liberado pelo primeiro clique.
+  function definirMudo(valor) {
+    mudo = !!valor;
+    aplicarVolume();
+  }
+
+  function alternarMudo() {
+    definirMudo(!mudo);
+    return mudo;
   }
 
   // ---------- Blocos básicos ----------
@@ -114,7 +132,8 @@ const Som = (() => {
 
   // ---------- Efeitos ----------
   const api = {
-    iniciar, monstro,
+    iniciar, monstro, definirMudo, alternarMudo,
+    get mudo() { return mudo; },
     clack() { ruido("bandpass", 2600, 900, 0.07, 0.9, 0, 2); tom("square", 190, 70, 0.09, 0.35); tom("square", 1400, 600, 0.03, 0.2, 0.05); },
     negado() { tom("sawtooth", 95, 80, 0.28, 0.35); tom("sawtooth", 98, 82, 0.28, 0.3); },
     porta(vol = 1) { ruido("lowpass", 300, 1400, 0.5, 0.5 * vol); tom("sine", 70, 38, 0.35, 0.6 * vol, 0.42); },

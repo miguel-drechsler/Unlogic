@@ -21,14 +21,55 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 | Tecla | Ação |
 |---|---|
 | W A S D / setas | andar |
-| Mouse | olhar |
+| Mouse | olhar (se o navegador bloquear a trava do cursor, arraste para olhar) |
 | Shift | correr (gasta fôlego) |
 | E ou clique | virar alavanca / usar terminal |
 | Tab | abrir e fechar o tablet |
+| H | abrir a tabela dos conectivos (ou voltar dela) |
+| R | reiniciar o andar |
 | M | mostrar e esconder o minimapa |
+| K | ligar/desligar o som |
 | 1–9 (tablet aberto) | tabela-verdade da porta · no terminal: acusar a porta |
+| 0 (tablet aberto) | voltar à visão geral |
 | PgDn / PgUp (tablet aberto) | rolar o tablet |
 | Esc | pausar |
+
+Se o navegador ou o preview bloquear a **trava do mouse** (Pointer Lock), o jogo entra
+automaticamente no modo de **arrastar para olhar**: segure o botão esquerdo (ou direito)
+e arraste. Um clique curto sem arrastar continua interagindo, e `E` também funciona.
+`Esc` pausa normalmente nesse modo.
+
+### Ajudas para raciocinar (sem entregar a solução)
+- **Avaliação de dentro para fora.** Na tabela-verdade de uma porta, o tablet também
+  mostra cada subfórmula já resolvida com os valores atuais das alavancas. É a
+  semântica composicional acontecendo diante do jogador: primeiro os parênteses
+  internos, depois o conectivo principal. A ajuda só aparece para as variáveis que
+  você já encontrou.
+- **Tabela dos conectivos (`H`).** Uma referência com a tabela-verdade de ¬, ∧, ∨, → e ↔,
+  gerada pelo próprio motor lógico, além da precedência e da associatividade da
+  condicional. Serve para consultar durante o jogo sem sair dele.
+- **Dependências da alavanca.** Ao mirar ou catalogar uma alavanca, a dica informa
+  em quais portas já encontradas ela aparece. Isso orienta a navegação, mas não
+  revela o valor correto nem a solução.
+- **Contador de portas e energia.** O topo da tela mostra `PORTAS abertas/total` e a
+  energia exata (`3/5`), para o jogador medir o custo de cada virada.
+- **Alavancas travadas após a vitória.** Quando o elevador é liberado, as alavancas
+  param de responder. Assim um toque acidental não fecha a saída já conquistada.
+
+### Modo estudo
+A opção **Modo estudo** no menu (Esc) desliga a criatura e os sustos, mantém a
+pontuação na tela e **não altera os recordes**. O HUD marca `ESTUDO`. É o modo
+indicado para estudar as fases com calma ou para apresentar a lógica em sala,
+sem o componente de terror atrapalhar a explicação. A lógica, a energia e as
+portas continuam exatamente iguais.
+
+### Recordes e preferências
+O melhor resultado de cada andar, o total de andares vencidos, a preferência de
+modo estudo e o estado do som ficam salvos no `localStorage` do navegador
+(`unlogic.progresso.v1`). O menu mostra o recorde por andar e o acumulado.
+Se o navegador bloquear o armazenamento (por exemplo, em janela privada), o jogo
+continua funcionando e o progresso vale só durante a sessão. Limpar os dados do
+site zera os recordes.
 
 ### Mecânicas e onde está a lógica
 | Mecânica | Conceito de lógica |
@@ -75,9 +116,10 @@ classico.html              versão 2D original (usa css/estilo.css e js/jogo.js)
 css/terror.css             HUD, tablet e telas
 vendor/                    Three.js r147 + PointerLockControls
 
-js/logica.js               MOTOR LÓGICO: parser, avaliação, tabela-verdade, classificação
+js/logica.js               MOTOR LÓGICO: parser, avaliação, tabela-verdade, classificação, subfórmulas
 js/fases.js                as fases (fácil de editar e criar novas)
 js/estado.js               regras em tempo real (energia, vitória, apagão, pontuação)
+js/progresso.js            recordes e preferências no localStorage
 js/labirinto.js            labirinto procedural por fase + pathfinding A*
 js/mundo.js                o andar em 3D; liga portas e alavancas ao motor lógico
 js/jogador.js              movimentação em primeira pessoa e colisão
@@ -88,6 +130,7 @@ js/texturas.js             texturas desenhadas em canvas (inclui o painel das po
 js/som.js                  sons sintetizados (Web Audio)
 js/jogo3d.js               cena, raycast de interação e laço principal
 
+testes/testes.html            suíte que roda no navegador, sem Node.js (parser, regras, fases)
 testes/verificador_fases.js   confere se toda fase tem solução com a energia dada
 testes/verificar_labirinto.js confere se o mapa de cada fase é jogável (e sem becos)
 testes/verificar_regras.js    simula partidas: caminho ótimo, viradas erradas, apagão
@@ -109,14 +152,48 @@ Edite `js/fases.js`. As fórmulas são escritas como texto:
 `!` (não), `&` (e), `|` (ou), `->` (se...então), `<->` (se e somente se).
 Exemplo: `"(A & !B) | C"`. O labirinto, as alavancas e as portas do novo andar são gerados sozinhos.
 
-Depois, se tiver o Node.js instalado, rode:
+Depois, para conferir tudo:
+
+**Sem instalar nada:** abra `testes/testes.html` no navegador (dois cliques). A suíte
+testa o parser, a precedência, as tabelas-verdade, a classificação, as regras de
+energia/vitória/apagão e a existência de solução em todas as fases.
+
+**Com Node.js instalado:**
 ```
 node testes/verificador_fases.js     # a fase tem solução? quantos movimentos no mínimo?
 node testes/verificar_labirinto.js   # desenha o mapa e confere se tudo é alcançável
 node testes/verificar_regras.js      # simula a partida com as regras do jogo
 ```
 
+## Versão clássica 2D
+`classico.html` mantém o puzzle original. Ela ganhou apenas duas correções de
+consistência com o jogo 3D:
+- a fase termina assim que a energia restante **não alcança mais nenhuma solução**,
+  em vez de deixar o jogador virando alavancas sem saída (a mensagem explica se
+  ainda faltavam viradas ou se nenhuma valoração abre todas as portas);
+- `R` reinicia a fase, além do botão “Reiniciar fase”.
+
 ## Para a apresentação
+- Ative o **Modo estudo** no menu para desligar a criatura; o recorde não é afetado.
 - Os botões −1 a −5 no menu (Esc) pulam para qualquer andar.
+- `H` abre a tabela dos conectivos a qualquer momento durante a partida.
 - `index.html?demo` roda sem travar o mouse e expõe `depurar` no console do navegador
   (`depurar.passos = 8` acelera a simulação; foi assim que um bot jogou os cinco andares).
+
+## O que mudou nesta versão
+- Ajudas de raciocínio no tablet: avaliação passo a passo da valoração atual,
+  referência dos conectivos (`H`) e dica das portas em que cada alavanca aparece.
+- Modo estudo (sem criatura e sem recorde), recordes persistentes por andar e
+  preferências de som/estudo no `localStorage`.
+- Contador de portas e de energia, reinício rápido (`R`), mudo (`K`) e alavancas
+  travadas depois que o elevador é liberado.
+- Fallback de câmera: se o navegador bloquear a trava do mouse, o jogo aceita
+  arrastar para olhar em vez de ficar preso no menu.
+- Correção do apagão: ele também dispara quando ainda há energia, mas não há mais
+  solução possível. A mesma regra foi levada à versão 2D.
+- Selar uma contradição no terminal é gratuito e pode ser a última jogada mesmo com
+  energia zero (necessário para o caminho ótimo do andar −5).
+- Suíte de testes no navegador, sem depender de Node.js.
+
+Nada disso muda o núcleo: as fases continuam sendo resolvidas avaliando fórmulas
+proposicionais sobre as mesmas alavancas compartilhadas.

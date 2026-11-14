@@ -106,6 +106,8 @@ const Monstro = (() => {
       g.position.set(centro(tile.x), 0, centro(tile.z));
       modo = "patrulha"; rota = []; destino = null; repensar = 0; perdido = 0; cacando = 0; descanso = 0;
       dormindo = espera; // segundos de trégua no começo do andar
+      guinada = 0;
+      g.rotation.y = 0;
       boca.scale.y = 1.7;
       cabeca.rotation.set(0.18, 0, 0); // cabeça baixa
     }

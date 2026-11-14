@@ -9,7 +9,7 @@
  *
  * Sintaxe aceita nas fórmulas (ASCII ou Unicode):
  *   negação        !   ~   ¬
- *   conjunção      &   ∧
+ *   conjunção      &   ^   ∧
  *   disjunção      |   ∨
  *   condicional    ->  →
  *   bicondicional  <-> ↔
@@ -17,6 +17,9 @@
  *
  * Precedência (da mais forte para a mais fraca): ¬, ∧, ∨, →, ↔
  * A condicional associa à direita: A → B → C  =  A → (B → C)
+ *
+ * Além do parser e da avaliação, o motor expõe `subformulas`, usado pelo tablet
+ * para mostrar a avaliação passo a passo (de dentro para fora) de uma fórmula.
  */
 const Logica = (() => {
   const SIMBOLO = { nao: "¬", e: "∧", ou: "∨", imp: "→", bi: "↔" };
@@ -32,7 +35,7 @@ const Logica = (() => {
       if (texto.startsWith("->", i)) { tokens.push("imp"); i += 2; continue; }
       if (c === "↔") { tokens.push("bi"); i++; continue; }
       if (c === "→") { tokens.push("imp"); i++; continue; }
-      if (c === "&" || c === "∧") { tokens.push("e"); i++; continue; }
+      if (c === "&" || c === "∧" || c === "^") { tokens.push("e"); i++; continue; }
       if (c === "|" || c === "∨") { tokens.push("ou"); i++; continue; }
       if (c === "!" || c === "~" || c === "¬") { tokens.push("nao"); i++; continue; }
       if (c === "(" || c === ")") { tokens.push(c); i++; continue; }
@@ -154,7 +157,28 @@ const Logica = (() => {
     return escrever(f, null);
   }
 
-  return { ler, avaliar, variaveis, tabelaVerdade, classificar, paraTexto, SIMBOLO };
+  // ---------- 8. Subfórmulas (para a avaliação passo a passo) ----------
+  // Devolve cada subfórmula uma única vez, em ordem pós-fixada: os operandos
+  // aparecem antes do conectivo que os une. É a ordem natural para avaliar
+  // "de dentro para fora", como numa prova de semântica:
+  //   A, B, ¬B, A ∧ ¬B
+  function subformulas(f) {
+    const lista = [];
+    const vistos = new Set();
+    function visitar(no) {
+      if (no.op === "nao") visitar(no.arg);
+      else if (no.op !== "var") { visitar(no.esq); visitar(no.dir); }
+      const chave = paraTexto(no);
+      if (!vistos.has(chave)) {
+        vistos.add(chave);
+        lista.push(no);
+      }
+    }
+    visitar(f);
+    return lista;
+  }
+
+  return { ler, avaliar, variaveis, tabelaVerdade, classificar, paraTexto, subformulas, SIMBOLO };
 })();
 
 if (typeof module !== "undefined") module.exports = Logica;

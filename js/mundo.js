@@ -228,13 +228,15 @@ const Mundo = (() => {
       return p.abertura < 0.6 && Math.abs(aoLongo(p, x, z)) < ESPESSURA;
     }
 
-    // Para o A*: chão, ou porta logicamente aberta (a saída nunca: o monstro não foge).
+    // Para o A*: chão, ou porta realmente aberta (a saída nunca: o monstro não foge).
+    // Usa a abertura física, não só o alvo lógico, para ele não atravessar uma
+    // folha que ainda está subindo ou que já começou a descer.
     function passavel(tx, tz) {
       const t = tipo(tx, tz);
       if (t === CHAO) return true;
       if (t === PAREDE) return false;
       const p = portaEm(tx, tz);
-      return p !== saida && p.alvo === 1;
+      return p !== saida && p.abertura > 0.6;
     }
 
     // ---------- Animações de cada quadro ----------

@@ -22,6 +22,9 @@ html, body {
 }
 
 #palco, #palco canvas { position: fixed; inset: 0; display: block; }
+/* Fallback para navegadores que bloqueiam a trava do mouse: arrastar para olhar. */
+body.sem-trava, body.sem-trava #palco canvas { cursor: crosshair; }
+body.sem-trava.arrastando, body.sem-trava.arrastando #palco canvas { cursor: grabbing; }
 
 .v { color: var(--v); }
 .f { color: var(--f); }
@@ -77,6 +80,7 @@ html, body {
 .pip { width: 16px; height: 12px; background: #12241a; }
 .pip.cheio { background: var(--v); box-shadow: 0 0 8px var(--v); }
 #bateria.vazia { border-color: var(--f); animation: piscar 0.5s steps(2) infinite; }
+.energia-num { font-size: 12px; color: var(--fraco); min-width: 26px; }
 @keyframes piscar { 50% { opacity: 0.25; } }
 
 #chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -140,6 +144,8 @@ html, body {
 #folego { flex: none; width: 150px; height: 6px; background: rgba(255, 255, 255, 0.12); }
 #folegoNivel { display: block; height: 100%; width: 100%; background: var(--tinta); }
 #folego.baixo #folegoNivel { background: var(--f); }
+#rodape .som { margin-left: auto; color: var(--fraco); letter-spacing: 0.12em; }
+#rodape .som.mudo { color: var(--f); }
 
 /* ---------- Tablet ---------- */
 #tablet {
@@ -158,6 +164,7 @@ html, body {
   line-height: 1.45;
 }
 #tablet.terminal { border-color: var(--aviso); box-shadow: 0 0 30px rgba(255, 201, 58, 0.2); }
+#tablet.ajuda { border-color: var(--v); box-shadow: 0 0 30px rgba(53, 255, 122, 0.24); }
 #tablet header {
   display: flex;
   justify-content: space-between;
@@ -199,6 +206,18 @@ html, body {
 .formula.grande { font-size: 17px; color: #fff; }
 .nota { font-size: 11px; color: var(--fraco); }
 .teclas { font-size: 11px; color: var(--aviso); }
+
+/* Avaliação passo a passo (de dentro para fora) */
+.passos { list-style: none; margin: 0 0 12px; padding: 0; font-family: var(--mono); font-size: 13px; }
+.passos li { padding: 3px 0; border-bottom: 1px dashed #1d4a30; overflow-wrap: anywhere; }
+.passos li:last-child { border-bottom: none; }
+.passos .rotulo { display: block; margin-bottom: 4px; }
+
+/* Tabela de referência dos conectivos */
+#tablet .referencia { margin-bottom: 14px; }
+#tablet .referencia th { font-size: 11px; }
+#tablet .referencia td { font-size: 13px; }
+#tablet .referencia .formula { font-size: 15px; }
 
 #tablet table { border-collapse: collapse; margin: 0 0 10px; width: 100%; }
 #tablet th, #tablet td { padding: 3px 10px; text-align: center; border: 1px solid #1d4a30; }
@@ -248,6 +267,10 @@ html, body {
 .teclado { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0; font-size: 13px; align-items: center; }
 .teclado dt { white-space: nowrap; }
 .teclado dd { margin: 0; color: var(--fraco); }
+.opcoes { display: flex; flex-wrap: wrap; gap: 20px; margin: 0 0 14px; font-size: 13px; }
+.opcoes label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.opcoes input { accent-color: var(--v); width: 16px; height: 16px; }
+.opcoes .nota { font-size: 11px; }
 kbd {
   display: inline-block;
   min-width: 22px;

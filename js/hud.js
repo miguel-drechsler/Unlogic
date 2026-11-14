@@ -13,12 +13,15 @@ const Hud = (() => {
   let relogioAviso = null;
 
   // ---------- Barra fixa ----------
-  function barra(e) {
-    $("andar").textContent = `ANDAR −${e.indice + 1} · ${e.fase.titulo}`;
+  function barra(e, modoEstudo = false) {
+    const resolvidas = e.portas.filter((_, i) => Estado.portaResolvida(e, i)).length;
+    $("andar").textContent = `ANDAR −${e.indice + 1} · ${e.fase.titulo}` +
+      ` · PORTAS ${resolvidas}/${e.portas.length}` + (modoEstudo ? " · ESTUDO" : "");
     let pips = "";
     for (let i = 0; i < e.fase.energia; i++) pips += `<span class="pip${i < e.energia ? " cheio" : ""}"></span>`;
     $("bateria").innerHTML = pips;
     $("bateria").classList.toggle("vazia", e.energia === 0);
+    $("energiaNum").textContent = `${e.energia}/${e.fase.energia}`;
 
     $("chips").innerHTML = Object.keys(e.valores).map((n) => {
       if (!e.alavancasVistas.has(n)) return `<span class="chip oculto">${n} ?</span>`;
@@ -33,6 +36,13 @@ const Hud = (() => {
     el.className = "mostrar " + tipo;
     clearTimeout(relogioAviso);
     relogioAviso = setTimeout(() => { el.className = ""; }, 4200);
+  }
+
+  function limparAviso() {
+    clearTimeout(relogioAviso);
+    const el = $("aviso");
+    el.textContent = "";
+    el.className = "";
   }
 
   function dica(texto) {
@@ -65,6 +75,23 @@ const Hud = (() => {
     }).join("");
   }
 
+  // Mostra a avaliação da fórmula "de dentro para fora", usando os valores das
+  // alavancas já encontradas. É a mesma ideia da tabela-verdade, mas aplicada
+  // à valoração atual: o jogador vê a semântica composicional acontecendo.
+  function avaliacaoAtual(e, i) {
+    const { arvore } = e.portas[i];
+    const passos = Logica.subformulas(arvore)
+      .filter((no) => no.op !== "var")
+      .filter((no) => Logica.variaveis(no).every((n) => e.alavancasVistas.has(n)))
+      .map((no) => {
+        const valor = Logica.avaliar(no, e.valores);
+        const texto = Logica.paraTexto(no, (n) => `<b class="${cls(e.valores[n])}">${VF(e.valores[n])}</b>`);
+        return `<li><span class="formula">${texto}</span> = <b class="${cls(valor)}">${VF(valor)}</b></li>`;
+      });
+    if (!passos.length) return "";
+    return `<p class="rotulo">AVALIAÇÃO ATUAL · de dentro para fora</p><ul class="passos">${passos.join("")}</ul>`;
+  }
+
   function tabela(e, i) {
     const { arvore } = e.portas[i];
     const { vars, linhas } = Logica.tabelaVerdade(arvore);
@@ -80,10 +107,39 @@ const Hud = (() => {
     return html + `</tbody></table><p class="nota">${sei
       ? "A linha destacada é a situação atual das alavancas."
       : "Encontre todas as alavancas desta fórmula para ver a linha atual."}</p>
-      <p class="teclas">[0] voltar · [1-${e.portas.length}] outra porta</p>`;
+      ${avaliacaoAtual(e, i)}
+      <p class="teclas">[0] voltar · [1-${e.portas.length}] outra porta · [H] conectivos · [TAB] fechar</p>`;
   }
 
-  // visao = { tipo: "geral" | "tabela" | "terminal", porta }
+  // Referência dos cinco conectivos, gerada pelo próprio motor lógico.
+  function referencia() {
+    const itens = [
+      ["Negação", "!A", "¬A inverte o valor de A."],
+      ["Conjunção", "A & B", "A ∧ B só é verdadeira quando A e B são verdadeiras."],
+      ["Disjunção", "A | B", "A ∨ B é falsa somente quando A e B são falsas."],
+      ["Condicional", "A -> B", "A → B só é falsa quando A é verdadeira e B é falsa."],
+      ["Bicondicional", "A <-> B", "A ↔ B é verdadeira quando A e B têm o mesmo valor."],
+    ];
+    let html = `<h3>Conectivos — tabela-verdade</h3>
+      <p class="nota">Precedência: ¬, ∧, ∨, →, ↔. A condicional associa à direita:
+      A → B → C = A → (B → C). “V” = verdadeiro, “F” = falso.</p>`;
+    for (const [nome, texto, desc] of itens) {
+      const f = Logica.ler(texto);
+      const { vars, linhas } = Logica.tabelaVerdade(f);
+      html += `<p class="formula">${nome} <span class="oculto">·</span> ${Logica.paraTexto(f)}</p>
+        <p class="nota">${desc}</p>
+        <table class="referencia"><thead><tr>${vars.map((v) => `<th>${v}</th>`).join("")}<th>${Logica.paraTexto(f)}</th></tr></thead><tbody>`;
+      linhas.forEach((l) => {
+        html += "<tr>" +
+          vars.map((v) => `<td class="${cls(l.valores[v])}">${VF(l.valores[v])}</td>`).join("") +
+          `<td class="${cls(l.resultado)}">${VF(l.resultado)}</td></tr>`;
+      });
+      html += "</tbody></table>";
+    }
+    return html + `<p class="teclas">[H] voltar · [0] visão geral · [TAB] fechar</p>`;
+  }
+
+  // visao = { tipo: "geral" | "tabela" | "terminal" | "ajuda", porta }
   function tablet(e, aberto, visao) {
     const el = $("tablet");
     el.hidden = !aberto;
@@ -97,16 +153,19 @@ const Hud = (() => {
         <p>Qual porta é uma <b>contradição</b> (falsa em todas as linhas da tabela-verdade)?
         Acertar sela a porta. <b class="f">Errar custa 1 de energia</b> e enfurece a criatura.</p>
         <ul class="portas">${listaDePortas(e)}</ul>
-        <p class="teclas">[1-${n}] acusar porta · [TAB] sair</p>`;
+        <p class="teclas">[1-${n}] acusar porta · [H] conectivos · [TAB] sair</p>`;
+    } else if (visao.tipo === "ajuda") {
+      $("tabletCorpo").innerHTML = referencia();
     } else {
       // As portas vêm primeiro: são o que o jogador consulta com pressa.
       $("tabletCorpo").innerHTML = `<h3>${e.fase.conceito}</h3>
         <ul class="portas">${listaDePortas(e)}</ul>
-        <p class="teclas">[1-${n}] tabela-verdade (−${Estado.CUSTO_TABELA} pts na 1ª consulta) · [PgDn/PgUp] rolar · [TAB] fechar</p>
+        <p class="teclas">[1-${n}] tabela-verdade (−${Estado.CUSTO_TABELA} pts na 1ª consulta) · [H] conectivos · [PgDn/PgUp] rolar · [TAB] fechar</p>
         <p>${e.fase.texto}</p>
         <p class="nota">¬ não · ∧ e · ∨ ou · → se...então · ↔ se e somente se<br>
         A saída só libera com <b>todas</b> as portas abertas ou seladas ao mesmo tempo.
-        O botão “Impossível!” fica no terminal verde do andar.</p>`;
+        O botão “Impossível!” fica no terminal verde do andar.<br>
+        Se precisar recomeçar o andar, aperte <b>R</b>.</p>`;
     }
   }
 
@@ -131,8 +190,11 @@ const Hud = (() => {
       el.appendChild(b);
     });
     const f = FASES[indice];
+    const total = melhores.reduce((s, p) => s + (p || 0), 0);
+    const feitos = melhores.filter((p) => p !== null).length;
     $("andarInfo").textContent = `${f.titulo} — ${f.conceito}` +
-      (melhores[indice] !== null ? ` · melhor: ${melhores[indice]} pts` : "");
+      (melhores[indice] !== null ? ` · melhor: ${melhores[indice]} pts` : "") +
+      ` · recorde: ${feitos}/${FASES.length} andares, ${total} pts`;
   }
 
   function telaFim(mostrar, { titulo, corpo, botoes } = {}) {
@@ -153,5 +215,5 @@ const Hud = (() => {
 
   const susto = (ligado) => $("susto").classList.toggle("ligado", ligado);
 
-  return { barra, aviso, dica, folego, perigo, tablet, telaInicio, seletor, telaFim, susto, VF };
+  return { barra, aviso, limparAviso, dica, folego, perigo, tablet, telaInicio, seletor, telaFim, susto, VF };
 })();

@@ -19,7 +19,7 @@
     <div id="esquerda">
       <div id="barra">
         <div id="andar"></div>
-        <div class="linha"><span class="rotulo">ENERGIA</span><div id="bateria"></div></div>
+        <div class="linha"><span class="rotulo">ENERGIA</span><div id="bateria"></div><span id="energiaNum" class="energia-num"></span></div>
         <div id="chips"></div>
       </div>
       <canvas id="minimapa" width="432" height="432" aria-label="Minimapa"></canvas>
@@ -31,7 +31,8 @@
 
     <div id="rodape">
       <div id="folego"><span id="folegoNivel"></span></div>
-      <span>WASD andar · SHIFT correr · E / clique interagir · TAB tablet · M minimapa · ESC pausar</span>
+      <span>WASD andar · SHIFT correr · E / clique interagir · TAB tablet · H conectivos · R reiniciar · M minimapa · K som · ESC pausar</span>
+      <span id="somEstado" class="som">SOM LIGADO</span>
     </div>
 
     <aside id="tablet" hidden>
@@ -75,10 +76,22 @@
             <dt><kbd>Shift</kbd></dt><dd>correr</dd>
             <dt><kbd>E</kbd> ou clique</dt><dd>interagir</dd>
             <dt><kbd>Tab</kbd></dt><dd>tablet</dd>
+            <dt><kbd>H</kbd></dt><dd>tabela dos conectivos</dd>
+            <dt><kbd>R</kbd></dt><dd>reiniciar o andar</dd>
             <dt><kbd>M</kbd></dt><dd>minimapa</dd>
+            <dt><kbd>K</kbd></dt><dd>ligar/desligar o som</dd>
             <dt><kbd>Esc</kbd></dt><dd>pausar</dd>
           </dl>
         </section>
+      </div>
+
+      <div class="opcoes">
+        <label title="Desliga a criatura e o medo: ideal para estudar ou apresentar a lógica com calma.">
+          <input type="checkbox" id="modoEstudo"> Modo estudo <span class="nota">(sem criatura; não conta recorde)</span>
+        </label>
+        <label>
+          <input type="checkbox" id="somLigado" checked> Som
+        </label>
       </div>
 
       <footer class="inicio-base">
@@ -108,6 +121,7 @@
   <script src="js/logica.js"></script>    <!-- motor lógico (intacto) -->
   <script src="js/fases.js"></script>     <!-- as fases (intacto) -->
   <script src="js/estado.js"></script>    <!-- regras em tempo real -->
+  <script src="js/progresso.js"></script> <!-- recordes e preferências -->
   <script src="js/labirinto.js"></script> <!-- mapa procedural + A* -->
   <script src="js/texturas.js"></script>
   <script src="js/som.js"></script>

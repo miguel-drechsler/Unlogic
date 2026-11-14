@@ -79,14 +79,17 @@ const Minimapa = (() => {
     if (viu(lab.terminal)) letra(lab.terminal, "T", COR.selada);
 
     // Criatura: só dentro do alcance do sensor, e pulsando.
-    const mx = d.monstro.x - d.jogador.x, mz = d.monstro.z - d.jogador.z;
-    if (Math.hypot(mx, mz) < ALCANCE_SENSOR) {
-      g.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(d.tempo * 6));
-      g.fillStyle = COR.fechada;
-      g.beginPath();
-      g.arc((d.monstro.x / T) * s, (d.monstro.z / T) * s, s * 0.45, 0, Math.PI * 2);
-      g.fill();
-      g.globalAlpha = 1;
+    // No modo estudo, `d.monstro` é null e o sensor fica desligado.
+    if (d.monstro) {
+      const mx = d.monstro.x - d.jogador.x, mz = d.monstro.z - d.jogador.z;
+      if (Math.hypot(mx, mz) < ALCANCE_SENSOR) {
+        g.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(d.tempo * 6));
+        g.fillStyle = COR.fechada;
+        g.beginPath();
+        g.arc((d.monstro.x / T) * s, (d.monstro.z / T) * s, s * 0.45, 0, Math.PI * 2);
+        g.fill();
+        g.globalAlpha = 1;
+      }
     }
 
     // Jogador: seta apontando para onde ele olha.
