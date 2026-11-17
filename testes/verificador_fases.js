@@ -1,6 +1,6 @@
 /*
- * verificar_fases.js — confere se cada fase é jogável.
- * Uso:  node testes/verificar_fases.js
+ * verificador_fases.js — confere se cada fase é jogável.
+ * Uso:  node testes/verificador_fases.js
  *
  * Para cada fase, testa TODAS as combinações das alavancas livres e mostra:
  *   - a classificação de cada porta (tautologia / contradição / contingência)

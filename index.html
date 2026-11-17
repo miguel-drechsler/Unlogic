@@ -31,7 +31,7 @@
 
     <div id="rodape">
       <div id="folego"><span id="folegoNivel"></span></div>
-      <span>WASD andar · SHIFT correr · E / clique interagir · TAB tablet · H conectivos · R reiniciar · M minimapa · K som · ESC pausar</span>
+      <span>WASD andar · SHIFT correr · E / clique interagir · TAB tablet · H conectivos · R reiniciar · M minimapa · K som · P ou ESC pausar</span>
       <span id="somEstado" class="som">SOM LIGADO</span>
     </div>
 
@@ -41,67 +41,102 @@
     </aside>
   </div>
 
-  <!-- Menu / pausa -->
-  <section id="telaInicio" class="tela">
-    <div class="cartao inicio">
-      <header>
-        <h1 id="inicioTitulo">UNLOGIC</h1>
-        <p id="inicioSub" class="sub"></p>
-      </header>
+  <!-- Tela de início: placa do laboratório + painel do elevador (escolha do andar) -->
+  <section id="telaInicio" class="tela tela-inicio" aria-labelledby="logo">
+    <div class="inicio">
+      <div class="inicio-texto">
+        <h1 id="logo" class="logo">UNLOGIC</h1>
+        <p class="tagline">Laboratório de lógica proposicional, subsolo. As portas só obedecem a fórmulas verdadeiras, e algo lá embaixo ouve cada alavanca.</p>
 
-      <div class="paineis">
-        <section class="painel">
-          <h3>Objetivo</h3>
-          <ul>
-            <li>Cada <b>alavanca</b> é uma variável (<b class="v">V</b> ou <b class="f">F</b>). Virar uma gasta <b>1 de energia</b>.</li>
-            <li>Cada <b>porta</b> abre na hora em que a fórmula do painel fica verdadeira.</li>
-            <li>O <b>elevador</b> só libera com <b>todas</b> as portas abertas ao mesmo tempo.</li>
-          </ul>
-        </section>
+        <div class="vistas" data-vistas>
+          <section class="vista" data-vista="andar" aria-live="polite">
+            <p id="andarNumero" class="andar-numero"></p>
+            <h2 id="andarTitulo" class="andar-titulo"></h2>
+            <p id="andarConceito" class="andar-conceito"></p>
+            <dl id="andarFicha" class="ficha"></dl>
+            <button id="btnDescer" class="acao-principal" data-acao="jogar"></button>
+          </section>
 
-        <section class="painel alerta">
-          <h3>Perigo</h3>
-          <ul>
-            <li>Algo patrulha o andar e <b>ouve</b> cada alavanca virada.</li>
-            <li>Virada em falso deixa a criatura mais rápida.</li>
-            <li>Se a energia não der mais para abrir tudo, as luzes se apagam — e ela vem correndo.</li>
-          </ul>
-        </section>
+          <section class="vista" data-vista="ajuda" hidden>
+            <h2 class="vista-titulo">Como jogar</h2>
+            <div class="ajuda">
+              <div>
+                <h3>O objetivo</h3>
+                <ul>
+                  <li>Cada alavanca é uma variável: cabo para cima vale <b class="v">V</b>, para baixo vale <b class="f">F</b>. Virar custa 1 de energia.</li>
+                  <li>Cada porta abre na hora em que a fórmula do painel dela fica verdadeira.</li>
+                  <li>O elevador libera quando todas as portas estão abertas ao mesmo tempo.</li>
+                </ul>
+              </div>
+              <div>
+                <h3>O perigo</h3>
+                <ul>
+                  <li>Algo patrulha o andar e vai atrás do barulho de cada alavanca.</li>
+                  <li>Uma virada que não aproxima da solução deixa a criatura mais rápida.</li>
+                  <li>Se a energia não der mais para abrir tudo, as luzes se apagam.</li>
+                </ul>
+              </div>
+              <div>
+                <h3>Os controles</h3>
+                <div data-controles></div>
+              </div>
+            </div>
+            <button class="acao-texto" data-voltar>Voltar</button>
+          </section>
 
-        <section class="painel">
-          <h3>Controles</h3>
-          <dl class="teclado">
-            <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>andar</dd>
-            <dt><kbd>Mouse</kbd></dt><dd>olhar</dd>
-            <dt><kbd>Shift</kbd></dt><dd>correr</dd>
-            <dt><kbd>E</kbd> ou clique</dt><dd>interagir</dd>
-            <dt><kbd>Tab</kbd></dt><dd>tablet</dd>
-            <dt><kbd>H</kbd></dt><dd>tabela dos conectivos</dd>
-            <dt><kbd>R</kbd></dt><dd>reiniciar o andar</dd>
-            <dt><kbd>M</kbd></dt><dd>minimapa</dd>
-            <dt><kbd>K</kbd></dt><dd>ligar/desligar o som</dd>
-            <dt><kbd>Esc</kbd></dt><dd>pausar</dd>
-          </dl>
-        </section>
-      </div>
-
-      <div class="opcoes">
-        <label title="Desliga a criatura e o medo: ideal para estudar ou apresentar a lógica com calma.">
-          <input type="checkbox" id="modoEstudo"> Modo estudo <span class="nota">(sem criatura; não conta recorde)</span>
-        </label>
-        <label>
-          <input type="checkbox" id="somLigado" checked> Som
-        </label>
-      </div>
-
-      <footer class="inicio-base">
-        <div class="andares">
-          <div class="linha"><span class="rotulo">ANDAR</span><nav id="seletorFases" aria-label="Andares"></nav></div>
-          <p id="andarInfo"></p>
+          <section class="vista" data-vista="opcoes" hidden>
+            <h2 class="vista-titulo">Opções</h2>
+            <div data-opcoes></div>
+            <button class="acao-texto" data-voltar>Voltar</button>
+          </section>
         </div>
-        <button id="btnEntrar" class="botao primario">Entrar</button>
-      </footer>
-      <p class="nota"><a href="classico.html">Versão clássica 2D</a></p>
+
+        <nav class="inicio-nav" aria-label="Menu principal">
+          <button class="acao-texto" data-abrir="ajuda">Como jogar</button>
+          <button class="acao-texto" data-abrir="opcoes">Opções</button>
+          <a class="acao-texto" href="classico.html">Versão 2D clássica</a>
+        </nav>
+      </div>
+
+      <aside class="elevador" aria-label="Painel do elevador: escolha o andar">
+        <output id="visor" class="visor" aria-label="Andar selecionado"></output>
+        <div id="botoesAndar" class="botoes-andar" role="group" aria-label="Andares"></div>
+        <p id="progresso" class="elevador-rodape"></p>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Pausa: parada de emergência -->
+  <section id="telaPausa" class="tela tela-pausa" hidden aria-labelledby="pausaTitulo">
+    <div class="pausa">
+      <div class="faixa" aria-hidden="true"></div>
+      <div class="pausa-corpo">
+        <h2 id="pausaTitulo" class="pausa-titulo">Pausado</h2>
+        <p id="pausaAndar" class="pausa-andar"></p>
+        <p id="pausaMotivo" class="pausa-motivo" role="alert" hidden></p>
+        <dl id="pausaStatus" class="pausa-status"></dl>
+
+        <div class="vistas" data-vistas>
+          <nav class="vista pausa-acoes" data-vista="acoes" aria-label="Menu de pausa">
+            <button class="acao-lista primaria" data-acao="continuar">Continuar</button>
+            <button class="acao-lista" data-acao="reiniciar">Reiniciar andar</button>
+            <button class="acao-lista" data-abrir="opcoes">Opções</button>
+            <button class="acao-lista" data-abrir="controles">Controles</button>
+            <button class="acao-lista" data-acao="menu">Sair para o menu</button>
+          </nav>
+          <section class="vista" data-vista="opcoes" hidden>
+            <h3 class="vista-titulo">Opções</h3>
+            <div data-opcoes></div>
+            <button class="acao-texto" data-voltar>Voltar</button>
+          </section>
+          <section class="vista" data-vista="controles" hidden>
+            <h3 class="vista-titulo">Controles</h3>
+            <div data-controles></div>
+            <button class="acao-texto" data-voltar>Voltar</button>
+          </section>
+        </div>
+        <p class="pausa-dica"><kbd>P</kbd> continua o jogo</p>
+      </div>
     </div>
   </section>
 
@@ -130,6 +165,7 @@
   <script src="js/monstro.js"></script>
   <script src="js/minimapa.js"></script>
   <script src="js/hud.js"></script>
+  <script src="js/menus.js"></script>   <!-- tela de início e pausa -->
   <script src="js/jogo3d.js"></script>
 </body>
 </html>

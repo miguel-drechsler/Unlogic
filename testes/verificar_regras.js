@@ -35,6 +35,8 @@ FASES.forEach((fase, i) => {
   conferir(contradicoes.length === 0 || !Estado.venceu(e), "venceu antes de selar as contradições");
   contradicoes.forEach((k) => conferir(Estado.acusar(e, k).correto, `porta ${k + 1} deveria ser selável`));
   conferir(Estado.situacao(e) === "vitoria", "o caminho ótimo não vence");
+  const depois = Estado.virar(e, livres[0]);
+  conferir(!depois.ok && depois.motivo === "vitoria" && Estado.venceu(e), "virou alavanca com o elevador liberado");
   console.log(`  ótimo: virar ${viradas.join(", ")}${contradicoes.length ? " e selar " + contradicoes.map((k) => k + 1).join(", ") : ""}` +
     ` -> ${Estado.pontuacao(e)} pontos, ${e.energia} de energia sobrando`);
 

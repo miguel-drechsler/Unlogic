@@ -6,7 +6,9 @@
  */
 const Som = (() => {
   let ctx = null, mestre, bufferRuido, respiracao, respiracaoPan, respiracaoLfo;
-  let mudo = false;
+  // Três controles independentes sobre o mesmo ganho mestre:
+  //   volumeMestre  slider das Opções     mudo  tecla K / caixa "Som"     emPausa  menu de pausa
+  let volumeMestre = 0.8, mudo = false, emPausa = false;
 
   function iniciar() {
     if (ctx) { ctx.resume(); aplicarVolume(); return; }
@@ -14,7 +16,7 @@ const Som = (() => {
     if (!Classe) return;
     ctx = new Classe();
     mestre = ctx.createGain();
-    mestre.gain.value = mudo ? 0 : 0.8;
+    mestre.gain.value = ganhoAlvo();
     mestre.connect(ctx.destination);
 
     bufferRuido = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
@@ -25,9 +27,12 @@ const Som = (() => {
     respiracaoDoMonstro();
   }
 
+  const ganhoAlvo = () => (mudo || emPausa ? 0 : volumeMestre);
+
+  // Rampa curta em vez de corte seco: sem estalos ao pausar, mutar ou mexer no volume.
   function aplicarVolume() {
     if (!ctx || !mestre) return;
-    mestre.gain.setTargetAtTime(mudo ? 0 : 0.8, ctx.currentTime, 0.04);
+    mestre.gain.setTargetAtTime(ganhoAlvo(), ctx.currentTime, 0.04);
   }
 
   // Pode ser chamado antes de iniciar(): a preferência fica guardada e é
@@ -134,6 +139,8 @@ const Som = (() => {
   const api = {
     iniciar, monstro, definirMudo, alternarMudo,
     get mudo() { return mudo; },
+    volume(v) { volumeMestre = Math.max(0, Math.min(1, v)); aplicarVolume(); },
+    pausar(p) { emPausa = p; aplicarVolume(); },
     clack() { ruido("bandpass", 2600, 900, 0.07, 0.9, 0, 2); tom("square", 190, 70, 0.09, 0.35); tom("square", 1400, 600, 0.03, 0.2, 0.05); },
     negado() { tom("sawtooth", 95, 80, 0.28, 0.35); tom("sawtooth", 98, 82, 0.28, 0.3); },
     porta(vol = 1) { ruido("lowpass", 300, 1400, 0.5, 0.5 * vol); tom("sine", 70, 38, 0.35, 0.6 * vol, 0.42); },

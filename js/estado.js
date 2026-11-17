@@ -105,6 +105,8 @@ const Estado = (() => {
   // ---------- Jogadas ----------
   function virar(e, nome) {
     if (e.fase.presas.includes(nome)) return { ok: false, motivo: "presa" };
+    // Elevador liberado: as alavancas travam. Virar agora só desfaria a vitória
+    // (e contaria como virada em falso, acelerando a criatura no caminho até a saída).
     const agora = situacao(e);
     if (agora === "vitoria") return { ok: false, motivo: "vitoria" };
     if (e.energia <= 0 || agora === "apagao") return { ok: false, motivo: "sem-energia" };

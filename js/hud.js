@@ -30,27 +30,88 @@ const Hud = (() => {
     }).join("");
   }
 
+  // ---------- Avisos com fila ----------
+  // Vários avisos podem chegar no mesmo quadro (ex.: "ELEVADOR LIBERADO" e logo depois
+  // "Porta 3 catalogada"). Sem fila, o segundo apagava o primeiro antes de ser lido.
+  // tipo: "" (informativo), "bom" ou "ruim" (importantes).
+  const DURACAO = 4200;   // ms que o último aviso fica na tela
+  const MINIMO = 1600;    // ms mínimos antes de dar lugar ao próximo da fila
+  const FILA_MAX = 3;
+  const fila = [];
+  let atual = null;       // { texto, tipo, desde }
+
+  /*
+   * O aviso `novo` pode tomar o lugar do `atual` agora, ou deve esperar na fila?
+   *   atual, novo : { texto, tipo }  — tipo "" é informativo; "bom"/"ruim" são importantes
+   *   passou      : ms desde que `atual` apareceu
+   * Devolva true para interromper já, false para enfileirar.
+   *
+   * TODO(você): esta é a política de prioridade dos avisos. Hoje devolve sempre true
+   * (o comportamento antigo, que deixa um aviso importante ser apagado na hora).
+   */
+  function deveInterromper(atual, novo, passou) {
+    return true;
+  }
+
+  function mostrarAviso(a) {
+    const el = $("aviso");
+    atual = { ...a, desde: performance.now() };
+    el.textContent = a.texto;
+    el.className = "mostrar " + a.tipo;
+    agendarAviso();
+  }
+
+  function agendarAviso() {
+    clearTimeout(relogioAviso);
+    const passou = performance.now() - atual.desde;
+    relogioAviso = setTimeout(proximoAviso, Math.max(0, (fila.length ? MINIMO : DURACAO) - passou));
+  }
+
+  function proximoAviso() {
+    if (fila.length) return mostrarAviso(fila.shift());
+    atual = null;
+    $("aviso").className = "";
+  }
+
   function aviso(texto, tipo = "") {
-    const el = $("aviso");
-    el.textContent = texto;
-    el.className = "mostrar " + tipo;
+    const novo = { texto, tipo };
+    if (!atual || deveInterromper(atual, novo, performance.now() - atual.desde)) return mostrarAviso(novo);
+    if (fila.some((a) => a.texto === texto)) return; // repetido: não enfileira de novo
+    fila.push(novo);
+    if (fila.length > FILA_MAX) { // fila cheia: descarta o informativo mais velho (ou o mais velho de todos)
+      const k = fila.findIndex((a) => !a.tipo);
+      fila.splice(k >= 0 ? k : 0, 1);
+    }
+    agendarAviso();
+  }
+
+  function limparAvisos() {
+    fila.length = 0;
+    atual = null;
     clearTimeout(relogioAviso);
-    relogioAviso = setTimeout(() => { el.className = ""; }, 4200);
+    $("aviso").textContent = "";
+    $("aviso").className = "";
   }
 
-  function limparAviso() {
-    clearTimeout(relogioAviso);
-    const el = $("aviso");
-    el.textContent = "";
-    el.className = "";
+  // Mira e fôlego são atualizados a cada quadro: só tocam no DOM quando o valor muda.
+  // `ativa`: a mira cresce e fica verde (há algo para apertar). Portas só informam.
+  let ultimaDica = null, ultimoFolego = -1;
+  function dica(texto, ativa = !!texto) {
+    texto = texto || "";
+    const chave = texto + (ativa ? "\u0001" : "");
+    if (chave === ultimaDica) return;
+    ultimaDica = chave;
+    $("dica").textContent = texto;
+    $("mira").classList.toggle("ativa", ativa);
   }
 
-  function dica(texto) {
-    $("dica").textContent = texto || "";
-    $("mira").classList.toggle("ativa", !!texto);
+  function folego(f) {
+    const pct = Math.round(f * 100);
+    if (pct === ultimoFolego) return;
+    ultimoFolego = pct;
+    $("folegoNivel").style.width = `${pct}%`;
+    $("folego").classList.toggle("baixo", f < 0.3);
   }
-
-  const folego = (f) => { $("folegoNivel").style.width = `${Math.round(f * 100)}%`; $("folego").classList.toggle("baixo", f < 0.3); };
   const perigo = (p) => { $("perigo").style.opacity = p.toFixed(2); };
 
   // ---------- Tablet ----------
@@ -169,34 +230,7 @@ const Hud = (() => {
     }
   }
 
-  // ---------- Telas cheias ----------
-  function telaInicio(mostrar, { titulo, subtitulo, botao } = {}) {
-    $("telaInicio").hidden = !mostrar;
-    if (!mostrar) return;
-    $("inicioTitulo").textContent = titulo;
-    $("inicioSub").textContent = subtitulo;
-    $("btnEntrar").textContent = botao;
-  }
-
-  function seletor(indice, melhores, aoEscolher) {
-    const el = $("seletorFases");
-    el.innerHTML = "";
-    FASES.forEach((f, i) => {
-      const b = document.createElement("button");
-      b.textContent = `−${i + 1}`;
-      b.title = f.titulo;
-      b.className = "andar-btn" + (i === indice ? " atual" : "") + (melhores[i] !== null ? " feito" : "");
-      b.onclick = () => aoEscolher(i);
-      el.appendChild(b);
-    });
-    const f = FASES[indice];
-    const total = melhores.reduce((s, p) => s + (p || 0), 0);
-    const feitos = melhores.filter((p) => p !== null).length;
-    $("andarInfo").textContent = `${f.titulo} — ${f.conceito}` +
-      (melhores[indice] !== null ? ` · melhor: ${melhores[indice]} pts` : "") +
-      ` · recorde: ${feitos}/${FASES.length} andares, ${total} pts`;
-  }
-
+  // ---------- Tela de resultado (início e pausa ficam em menus.js) ----------
   function telaFim(mostrar, { titulo, corpo, botoes } = {}) {
     $("telaFim").hidden = !mostrar;
     if (!mostrar) return;
@@ -211,9 +245,10 @@ const Hud = (() => {
       b.onclick = acao;
       acoes.appendChild(b);
     });
+    acoes.firstChild.focus({ preventScroll: true }); // Enter já escolhe a ação principal
   }
 
   const susto = (ligado) => $("susto").classList.toggle("ligado", ligado);
 
-  return { barra, aviso, limparAviso, dica, folego, perigo, tablet, telaInicio, seletor, telaFim, susto, VF };
+  return { barra, aviso, limparAvisos, dica, folego, perigo, tablet, telaFim, susto, VF };
 })();

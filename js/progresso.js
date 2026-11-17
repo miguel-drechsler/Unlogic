@@ -9,6 +9,8 @@
  *   melhores[i]  melhor pontuação de cada andar (null = ainda não vencido)
  *   modoEstudo   prefere jogar sem a criatura?
  *   mudo         som desligado?
+ *   sensibilidade  sensibilidade do mouse (0,3 a 2,5)
+ *   volume         volume geral (0 a 1)
  */
 const Progresso = (() => {
   const CHAVE = "unlogic.progresso.v1";
@@ -18,8 +20,13 @@ const Progresso = (() => {
       melhores: Array(totalFases).fill(null),
       modoEstudo: false,
       mudo: false,
+      sensibilidade: 1,
+      volume: 0.8,
     };
   }
+
+  // Número salvo dentro da faixa, ou o padrão (dados antigos ou corrompidos não quebram o jogo).
+  const faixa = (v, min, max, padrao) => (Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : padrao);
 
   function carregar(totalFases) {
     const padrao = vazio(totalFases);
@@ -33,15 +40,17 @@ const Progresso = (() => {
         }),
         modoEstudo: dados.modoEstudo === true,
         mudo: dados.mudo === true,
+        sensibilidade: faixa(dados.sensibilidade, 0.3, 2.5, padrao.sensibilidade),
+        volume: faixa(dados.volume, 0, 1, padrao.volume),
       };
     } catch {
       return padrao;
     }
   }
 
-  function salvar({ melhores, modoEstudo, mudo }) {
+  function salvar({ melhores, modoEstudo, mudo, sensibilidade, volume }) {
     try {
-      localStorage.setItem(CHAVE, JSON.stringify({ melhores, modoEstudo, mudo }));
+      localStorage.setItem(CHAVE, JSON.stringify({ melhores, modoEstudo, mudo, sensibilidade, volume }));
     } catch {
       /* sem localStorage: o progresso fica só na memória */
     }

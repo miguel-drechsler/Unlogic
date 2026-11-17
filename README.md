@@ -12,7 +12,8 @@ Você está preso no subsolo de um laboratório escuro. Em cada andar:
 
 - cada **alavanca** na parede é uma variável proposicional (cabo para cima = V, para baixo = F);
 - cada **porta** tem uma fórmula no painel neon e abre na hora em que a fórmula fica verdadeira;
-- o **elevador** só libera quando todas as portas estão abertas (ou seladas) **ao mesmo tempo**;
+- o **elevador** só libera quando todas as portas estão abertas (ou seladas) **ao mesmo tempo** —
+  e aí as alavancas travam, para nenhum clique acidental desfazer a solução no caminho até a saída;
 - uma **criatura** patrulha o andar, ouve as alavancas e persegue quem chega perto.
 
 Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e cada virada gasta energia.
@@ -31,8 +32,18 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 | K | ligar/desligar o som |
 | 1–9 (tablet aberto) | tabela-verdade da porta · no terminal: acusar a porta |
 | 0 (tablet aberto) | voltar à visão geral |
-| PgDn / PgUp (tablet aberto) | rolar o tablet |
-| Esc | pausar |
+| Roda do mouse ou PgDn / PgUp (tablet aberto) | rolar o tablet |
+| P ou Esc | pausar (P também continua) |
+
+**Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓) e desça com Enter.
+"Como jogar" e "Opções" ficam logo abaixo.
+**Pausa:** continuar, reiniciar o andar, opções, controles ou sair para o menu. Reiniciar e sair
+pedem um segundo clique de confirmação, porque perdem o progresso do andar.
+
+Em "Opções" (no início e na pausa) há **sensibilidade do mouse**, **volume**, **som ligado** e
+**modo estudo**. Tudo isso e os recordes de cada andar ficam salvos no navegador (`js/progresso.js`).
+A resolução interna se ajusta sozinha se o FPS cair.
+Apontar a mira para uma porta mostra a fórmula e a situação dela.
 
 Se o navegador ou o preview bloquear a **trava do mouse** (Pointer Lock), o jogo entra
 automaticamente no modo de **arrastar para olhar**: segure o botão esquerdo (ou direito)
@@ -102,7 +113,8 @@ os −3 e −4 só perdoam uma acusação errada no terminal, e o −5 não perd
 - Começa a caçar quando o caminho até você fica curto; caçando, é mais lenta que o seu passo
   normal — até você errar. Cada virada em falso e cada acusação errada a aceleram.
 - Uma caçada dura no máximo 12 s; depois ela cansa, recua e fica 10 s sem caçar.
-- Portas fechadas a bloqueiam; portas abertas são atalho para ela também.
+- Portas fechadas a bloqueiam; portas abertas são atalho para ela também. Se uma porta fecha
+  no meio da rota (ou com ela no vão), ela recua e procura outro caminho.
 - Os andares não têm becos sem saída: sempre existe uma segunda rota de fuga.
   Mas virar uma alavanca pode **fechar** uma porta atrás de você — a lógica avisa antes.
 
@@ -125,6 +137,7 @@ js/mundo.js                o andar em 3D; liga portas e alavancas ao motor lógi
 js/jogador.js              movimentação em primeira pessoa e colisão
 js/monstro.js              modelo e IA da criatura
 js/hud.js                  bateria, avisos e tablet
+js/menus.js                tela de início (painel do elevador) e menu de pausa
 js/minimapa.js             minimapa com névoa de exploração
 js/texturas.js             texturas desenhadas em canvas (inclui o painel das portas)
 js/som.js                  sons sintetizados (Web Audio)
@@ -174,8 +187,8 @@ consistência com o jogo 3D:
 - `R` reinicia a fase, além do botão “Reiniciar fase”.
 
 ## Para a apresentação
-- Ative o **Modo estudo** no menu para desligar a criatura; o recorde não é afetado.
-- Os botões −1 a −5 no menu (Esc) pulam para qualquer andar.
+- Ative o **Modo estudo** em Opções para desligar a criatura; o recorde não é afetado.
+- O painel do elevador na tela de início pula para qualquer andar (pela pausa: "Sair para o menu").
 - `H` abre a tabela dos conectivos a qualquer momento durante a partida.
 - `index.html?demo` roda sem travar o mouse e expõe `depurar` no console do navegador
   (`depurar.passos = 8` acelera a simulação; foi assim que um bot jogou os cinco andares).

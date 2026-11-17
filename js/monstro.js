@@ -101,10 +101,11 @@ const Monstro = (() => {
     cena.add(g);
     const T = Mundo.T, centro = Mundo.centro;
     let modo, rota, destino, repensar, perdido, dormindo, cacando = 0, descanso = 0, mesmoTile = false, relogio = 0, andado = 0, guinada = 0;
+    let rotaComRecuo = false; // a rota atual já começa saindo de um vão de porta fechada
 
     function reposicionar(tile, espera = 4) {
       g.position.set(centro(tile.x), 0, centro(tile.z));
-      modo = "patrulha"; rota = []; destino = null; repensar = 0; perdido = 0; cacando = 0; descanso = 0;
+      modo = "patrulha"; rota = []; destino = null; repensar = 0; perdido = 0; cacando = 0; descanso = 0; rotaComRecuo = false;
       dormindo = espera; // segundos de trégua no começo do andar
       guinada = 0;
       g.rotation.y = 0;
@@ -154,10 +155,25 @@ const Monstro = (() => {
       const meu = { x: Math.floor(pos.x / T), z: Math.floor(pos.z / T) };
       const distJogador = Math.hypot(c.jogador.x - pos.x, c.jogador.z - pos.z);
 
+      // A porta fechou com ela no vão: recalcula já (com recuo), não daqui a REPENSAR s.
+      if (!c.passavel(meu.x, meu.z) && !rotaComRecuo) repensar = 0;
       repensar -= dt;
       if (repensar <= 0) {
         repensar = REPENSAR;
-        const ateJogador = Labirinto.caminho(c.lab, meu, c.tileJogador, c.passavel);
+        // Uma porta fechou com ela no vão: o A* não testa o tile de partida e a deixaria
+        // sair pelo outro lado. Ela recua para o vizinho livre mais perto de onde está.
+        let origem = meu, recuo = null;
+        if (!c.passavel(meu.x, meu.z)) {
+          const perto = (t) => Math.hypot(centro(t.x) - pos.x, centro(t.z) - pos.z);
+          for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const t = { x: meu.x + dx, z: meu.z + dz };
+            if (c.passavel(t.x, t.z) && (!recuo || perto(t) < perto(recuo))) recuo = t;
+          }
+          if (recuo) origem = recuo;
+        }
+        rotaComRecuo = !!recuo;
+        const comRecuo = (r) => (r && recuo ? [recuo, ...r] : r);
+        const ateJogador = comRecuo(Labirinto.caminho(c.lab, origem, c.tileJogador, c.passavel));
         const tiles = ateJogador ? ateJogador.length : Infinity;
 
         descanso = Math.max(0, descanso - REPENSAR);
@@ -180,7 +196,7 @@ const Monstro = (() => {
             modo = "patrulha";
             destino = sortearDestino(c);
           }
-          rota = Labirinto.caminho(c.lab, meu, destino, c.passavel);
+          rota = comRecuo(Labirinto.caminho(c.lab, origem, destino, c.passavel));
           if (!rota) { rota = []; destino = null; } // uma porta fechou o caminho: escolhe outro
         }
       }
@@ -188,6 +204,9 @@ const Monstro = (() => {
       // Para onde andar agora: centro do próximo tile da rota, ou direto no jogador
       // quando os dois estão no mesmo tile.
       let ax, az, proximo = false;
+      // A rota tem até REPENSAR segundos de idade: se uma porta fechou no meio dela,
+      // para e recalcula já no próximo quadro (senão ela atravessaria a porta fechada).
+      if (rota.length && !c.passavel(rota[0].x, rota[0].z)) { rota = []; repensar = 0; }
       if (rota.length) {
         ax = centro(rota[0].x); az = centro(rota[0].z);
         // Fora do eixo do corredor? Volta ao centro do tile antes, para não cortar a quina.
@@ -196,7 +215,7 @@ const Monstro = (() => {
       } else if (modo === "caca" && mesmoTile) { // sem rota (null) ele espera: nunca atravessa parede
         ax = c.jogador.x; az = c.jogador.z;
       } else {
-        return false;
+        return distJogador < ALCANCE; // parada (sem rota), mas ainda pega quem encostar nela
       }
 
       const dx = ax - pos.x, dz = az - pos.z, falta = Math.hypot(dx, dz);

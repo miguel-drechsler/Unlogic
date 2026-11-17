@@ -17,6 +17,8 @@ const Mundo = (() => {
   const H = 3.2;            // pé-direito
   const ALTURA_PORTA = 2.55;
   const ESPESSURA = 0.45;   // meia espessura de colisão de uma porta fechada
+  const PASSA = 0.75;       // abertura mínima para passar: a borda já está acima dos olhos (1,65 m)
+  const DENTRO = 0.85;      // |distância ao eixo da porta| em que o jogador ocupa o vão (ESPESSURA + raio)
   const { PAREDE, CHAO } = Labirinto;
   const centro = (t) => (t + 0.5) * T;
   const VERDE = 0x35ff7a, VERMELHO = 0xff3b30;
@@ -98,6 +100,9 @@ const Mundo = (() => {
 
     const portas = lab.portas.map((p) => criarPorta(p, p.eixo));
     const saida = criarPorta(lab.saida, lab.saida.eixo);
+    // Apontar a mira para uma porta mostra a fórmula e a situação dela (não é interação).
+    portas.forEach((p, i) => { p.folha.userData.interativo = { tipo: "porta", indice: i }; });
+    saida.folha.userData.interativo = { tipo: "saida" };
     const fora = { x: lab.saida.x - lab.saida.dentro.x, z: lab.saida.z - lab.saida.dentro.z };
     const matFundo = proprio(new THREE.MeshBasicMaterial({ color: 0x06180c }));
     const fundo = malha(new THREE.BoxGeometry(T, H, 0.1), matFundo,
@@ -225,18 +230,20 @@ const Mundo = (() => {
       if (t === PAREDE) return true;
       if (t === CHAO) return false;
       const p = portaEm(tx, tz);
-      return p.abertura < 0.6 && Math.abs(aoLongo(p, x, z)) < ESPESSURA;
+      return p.abertura < PASSA && Math.abs(aoLongo(p, x, z)) < ESPESSURA;
     }
 
     // Para o A*: chão, ou porta realmente aberta (a saída nunca: o monstro não foge).
-    // Usa a abertura física, não só o alvo lógico, para ele não atravessar uma
-    // folha que ainda está subindo ou que já começou a descer.
+    // Exige as duas coisas:
+    //   - abertura física > 0.6: não passa por uma folha que ainda está subindo;
+    //   - alvo lógico aberto: uma porta que começou a fechar bloqueia NA HORA. Só com a
+    //     abertura física ele ainda entraria no vão nos ~0,17 s em que a folha desce.
     function passavel(tx, tz) {
       const t = tipo(tx, tz);
       if (t === CHAO) return true;
       if (t === PAREDE) return false;
       const p = portaEm(tx, tz);
-      return p !== saida && p.abertura > 0.6;
+      return p !== saida && p.alvo === 1 && p.abertura > 0.6;
     }
 
     // ---------- Animações de cada quadro ----------
@@ -244,9 +251,10 @@ const Mundo = (() => {
       const tx = Math.floor(jogador.x / T), tz = Math.floor(jogador.z / T);
       for (const p of [...portas, saida]) {
         let alvo = p.alvo;
-        // Sensor de segurança: a porta não desce em cima do jogador.
+        // Sensor de segurança: a porta não desce em cima de quem está DENTRO do vão.
+        // (Só perto não basta: senão dava para segurar aberta uma porta logicamente fechada.)
         if (!alvo && p.abertura > 0.6 && p.tile.x === tx && p.tile.z === tz &&
-            Math.abs(aoLongo(p, jogador.x, jogador.z)) < 1) alvo = 1;
+            Math.abs(aoLongo(p, jogador.x, jogador.z)) < DENTRO) alvo = 1;
         p.abertura += Math.max(-2.4 * dt, Math.min(2.4 * dt, alvo - p.abertura));
         p.folha.position.y = ALTURA_PORTA / 2 + p.abertura * (ALTURA_PORTA - 0.05);
       }
@@ -267,7 +275,10 @@ const Mundo = (() => {
 
     function descartar() {
       cena.remove(grupo);
-      grupo.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+      grupo.traverse((o) => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.isInstancedMesh) o.dispose(); // libera o buffer de matrizes na GPU
+      });
       proprios.forEach((p) => p.dispose());
     }
 

@@ -16,12 +16,25 @@ const Minimapa = (() => {
   const COR = { ...Texturas.COR, chao: "#3f6853", parede: "#12211a" };
   const DIRECOES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
-  const novaVisao = (lab) => new Uint8Array(lab.L * lab.L);
+  // A camada de tiles (o grosso do desenho) só muda quando algo novo é revelado:
+  // fica guardada num canvas fora da tela e é só copiada a cada quadro.
+  const camadas = new WeakMap(); // visto -> { canvas, suja }
+
+  function novaVisao(lab) {
+    const visto = new Uint8Array(lab.L * lab.L);
+    camadas.set(visto, { canvas: document.createElement("canvas"), suja: true });
+    return visto;
+  }
 
   // Marca como vistos os tiles em volta de (tx, tz) e ao longo dos corredores.
   function revelar(lab, visto, tx, tz) {
     const { L, tiles } = lab;
-    const marcar = (x, z) => { if (x >= 0 && z >= 0 && x < L && z < L) visto[z * L + x] = 1; };
+    const camada = camadas.get(visto);
+    const marcar = (x, z) => {
+      if (x < 0 || z < 0 || x >= L || z >= L || visto[z * L + x]) return;
+      visto[z * L + x] = 1;
+      if (camada) camada.suja = true;
+    };
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) marcar(tx + dx, tz + dz);
     for (const [dx, dz] of DIRECOES) {
       for (let k = 1; k <= ALCANCE_VISAO; k++) {
@@ -42,13 +55,21 @@ const Minimapa = (() => {
     const viu = (t) => visto[t.z * L + t.x];
     g.clearRect(0, 0, canvas.width, canvas.height);
 
-    for (let z = 0; z < L; z++) {
-      for (let x = 0; x < L; x++) {
-        if (!visto[z * L + x]) continue;
-        g.fillStyle = lab.tiles[z * L + x] === PAREDE ? COR.parede : COR.chao;
-        g.fillRect(x * s, z * s, s + 0.5, s + 0.5); // +0.5 fecha as frestas entre tiles
+    const camada = camadas.get(visto);
+    if (camada.suja || camada.canvas.width !== canvas.width) {
+      camada.canvas.width = canvas.width;
+      camada.canvas.height = canvas.height;
+      const gc = camada.canvas.getContext("2d");
+      for (let z = 0; z < L; z++) {
+        for (let x = 0; x < L; x++) {
+          if (!visto[z * L + x]) continue;
+          gc.fillStyle = lab.tiles[z * L + x] === PAREDE ? COR.parede : COR.chao;
+          gc.fillRect(x * s, z * s, s + 0.5, s + 0.5); // +0.5 fecha as frestas entre tiles
+        }
       }
+      camada.suja = false;
     }
+    g.drawImage(camada.canvas, 0, 0);
 
     // Portas e elevador: um traço atravessado no corredor.
     const traco = (p, cor) => {
