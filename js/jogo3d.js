@@ -60,6 +60,7 @@
   const melhores = progresso.melhores;
   let modoEstudo = progresso.modoEstudo; // sem criatura: para estudar/apresentar
   let mudo = progresso.mudo;
+  let modoMapa = progresso.mapa;         // "local" (gira com você) | "completo" | "oculto"
 
   // O que aparece em "Opções" (no início e na pausa). menus.js edita este objeto
   // e avisa por aplicarOpcoes(nome).
@@ -86,13 +87,29 @@
   let tentativaTrava = null;
 
   function salvarProgresso() {
-    Progresso.salvar({ melhores, modoEstudo, mudo, sensibilidade: opcoes.sensibilidade, volume: opcoes.volume });
+    Progresso.salvar({ melhores, modoEstudo, mudo, sensibilidade: opcoes.sensibilidade, volume: opcoes.volume, mapa: modoMapa });
+  }
+
+  // Tecla M: local -> completo -> oculto -> local. Começa no local, o mais fácil de ler.
+  const NOME_MAPA = {
+    local: "Minimapa local: gira com você, a sua frente é sempre para cima.",
+    completo: "Minimapa completo: o andar inteiro, com o norte para cima.",
+    oculto: "Minimapa oculto.",
+  };
+  function mostrarMapa() { $("minimapa").hidden = modoMapa === "oculto"; }
+  function alternarMapa() {
+    const lista = Progresso.MAPAS;
+    modoMapa = lista[(lista.indexOf(modoMapa) + 1) % lista.length];
+    mostrarMapa();
+    salvarProgresso();
+    Hud.aviso(NOME_MAPA[modoMapa]);
   }
 
   // Reflete as preferências nas Opções (início e pausa) e no HUD.
   function atualizarOpcoes() {
     opcoes.modoEstudo = modoEstudo;
     opcoes.som = !mudo;
+    opcoes.telaCheia = emTelaCheia();
     Menus.sincronizarOpcoes();
     const som = $("somEstado");
     som.textContent = mudo ? "SOM MUDO" : "SOM LIGADO";
@@ -102,6 +119,8 @@
 
   // Chamado por menus.js quando o jogador mexe numa opção (e uma vez na largada, sem nome).
   function aplicarOpcoes(nome) {
+    // A caixa "Tela cheia" não é preferência salva: só pede (ou larga) a tela cheia agora.
+    if (nome === "telaCheia") return alternarTelaCheia(opcoes.telaCheia);
     jogador.sensibilidade = opcoes.sensibilidade;
     Som.volume(opcoes.volume);
     mudo = !opcoes.som;
@@ -120,6 +139,44 @@
     atualizarOpcoes();
     salvarProgresso();
   }
+
+  // ---------- Tela cheia (issue #1: pausar sem sair dela) ----------
+  // Problema: o Esc é a tecla de pausa, mas em tela cheia o navegador usa o mesmo Esc para
+  // SAIR da tela cheia. Duas saídas, da melhor para a mais simples:
+  //   1. Keyboard Lock API (Chrome, Edge, Opera): em tela cheia, a página "segura" o Esc.
+  //      Um toque no Esc chega ao jogo e só pausa; para sair da tela cheia o navegador
+  //      exige SEGURAR o Esc (ele mesmo mostra esse aviso) — ou apertar F.
+  //   2. Nos outros (Firefox, Safari), o Esc continua saindo da tela cheia, então a tecla
+  //      P pausa sem sair. Soltar o mouse por código (exitPointerLock) não tira a tela cheia.
+  const podeTelaCheia = !!(document.documentElement.requestFullscreen && document.exitFullscreen);
+  const emTelaCheia = () => !!document.fullscreenElement;
+  let escSeguro = false; // o Esc está capturado pela Keyboard Lock API?
+
+  function alternarTelaCheia(querer = !emTelaCheia()) {
+    if (!podeTelaCheia) return Hud.aviso("Este navegador não permite tela cheia pela página. Use o F11.", "ruim");
+    if (querer === emTelaCheia()) return atualizarOpcoes();
+    const pedido = querer
+      ? document.documentElement.requestFullscreen({ navigationUI: "hide" })
+      : document.exitFullscreen();
+    // Recusa (ex.: sem clique ou tecla do jogador): a caixa em Opções volta ao estado real.
+    Promise.resolve(pedido).catch(() => atualizarOpcoes());
+  }
+
+  document.addEventListener("fullscreenchange", async () => {
+    escSeguro = false;
+    const teclado = navigator.keyboard;
+    if (emTelaCheia()) {
+      if (teclado && teclado.lock) {
+        try { await teclado.lock(["Escape"]); escSeguro = true; } catch (_) { /* sem Keyboard Lock: vale o P */ }
+      }
+      Hud.aviso(escSeguro
+        ? "Tela cheia. Esc ou P pausam sem sair dela. Para sair: F, ou segure o Esc."
+        : "Tela cheia. Use P para pausar sem sair dela (aqui o Esc sai da tela cheia). F também sai.");
+    } else if (teclado && teclado.unlock) {
+      teclado.unlock();
+    }
+    atualizarOpcoes();
+  });
 
   function iniciarFase(indice) {
     if (mundo) mundo.descartar();
@@ -376,11 +433,14 @@
       Hud.perigo(0);
     }
 
-    Minimapa.desenhar($("minimapa"), {
-      lab, visto, mundo, e, jogador: pos, frente,
-      monstro: modoEstudo ? null : monstro.grupo.position,
-      tempo: relogio,
-    });
+    if (modoMapa !== "oculto") {
+      Minimapa.desenhar($("minimapa"), {
+        lab, visto, mundo, e, jogador: pos, frente,
+        monstro: modoEstudo ? null : monstro.grupo.position,
+        tempo: relogio,
+        modo: modoMapa,
+      });
+    }
 
     const falha = Math.sin(relogio * 31) * Math.sin(relogio * 4.7) > 0.95 - 0.5 * proximidade;
     lanterna.intensity = apagao ? (falha ? 0.05 : 0.4) : (falha ? 0.45 : 1.5);
@@ -670,11 +730,16 @@
   }
 
   document.addEventListener("keydown", (ev) => {
+    // F: tela cheia de qualquer tela (a tecla é um gesto do jogador, então o navegador aceita).
+    if (ev.code === "KeyF" && !ev.repeat && modo !== "susto" && ev.target.type !== "range") {
+      return void alternarTelaCheia();
+    }
     if (modo === "menu" || modo === "pausado") return void Menus.tecla(ev, modo);
     if (modo !== "jogando") return; // nos menus, Tab navega pelos botões normalmente
     if (ev.code === "Tab") ev.preventDefault(); // em jogo, não deixa o foco sair do canvas
-    // Sem Pointer Lock o navegador não solta nada no Esc: a pausa é por nossa conta.
-    if (ev.code === "Escape" && semTrava) return void pausar();
+    // Esc que chega até aqui é nosso: sem Pointer Lock (arrasto) ou capturado em tela cheia
+    // (Keyboard Lock). Nos dois casos o navegador não pausou nada: a pausa é por nossa conta.
+    if (ev.code === "Escape" && (semTrava || escSeguro)) return void pedirPausa();
     if (ev.repeat) return;
     if (ev.code === "KeyP") {
       pedirPausa();
@@ -701,7 +766,7 @@
       salvarProgresso();
       Hud.aviso(mudo ? "Som desligado." : "Som ligado.", "");
     } else if (ev.code === "KeyM") {
-      $("minimapa").hidden = !$("minimapa").hidden;
+      alternarMapa();
     } else if (ev.code === "KeyE") {
       interagir();
     } else if (tabletAberto) {
@@ -777,10 +842,12 @@
       get e() { return e; }, get lab() { return lab; }, get mundo() { return mundo; },
       get modo() { return modo; }, get modoEstudo() { return modoEstudo; },
       get melhores() { return melhores; }, get pixel() { return pixel; },
+      get modoMapa() { return modoMapa; }, get escSeguro() { return escSeguro; },
     };
   }
 
   aplicarOpcoes(); // sensibilidade, volume e som salvos; sincroniza Opções e o HUD
+  mostrarMapa();
   // Começa no primeiro andar ainda não vencido.
   const primeiroPendente = melhores.findIndex((p) => p === null);
   iniciarFase(primeiroPendente >= 0 ? primeiroPendente : 0);

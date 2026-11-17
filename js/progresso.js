@@ -11,9 +11,11 @@
  *   mudo         som desligado?
  *   sensibilidade  sensibilidade do mouse (0,3 a 2,5)
  *   volume         volume geral (0 a 1)
+ *   mapa           minimapa: "local" (gira com o jogador), "completo" ou "oculto"
  */
 const Progresso = (() => {
   const CHAVE = "unlogic.progresso.v1";
+  const MAPAS = ["local", "completo", "oculto"];
 
   function vazio(totalFases) {
     return {
@@ -22,6 +24,7 @@ const Progresso = (() => {
       mudo: false,
       sensibilidade: 1,
       volume: 0.8,
+      mapa: "local",
     };
   }
 
@@ -42,19 +45,20 @@ const Progresso = (() => {
         mudo: dados.mudo === true,
         sensibilidade: faixa(dados.sensibilidade, 0.3, 2.5, padrao.sensibilidade),
         volume: faixa(dados.volume, 0, 1, padrao.volume),
+        mapa: MAPAS.includes(dados.mapa) ? dados.mapa : padrao.mapa,
       };
     } catch {
       return padrao;
     }
   }
 
-  function salvar({ melhores, modoEstudo, mudo, sensibilidade, volume }) {
+  function salvar({ melhores, modoEstudo, mudo, sensibilidade, volume, mapa }) {
     try {
-      localStorage.setItem(CHAVE, JSON.stringify({ melhores, modoEstudo, mudo, sensibilidade, volume }));
+      localStorage.setItem(CHAVE, JSON.stringify({ melhores, modoEstudo, mudo, sensibilidade, volume, mapa }));
     } catch {
       /* sem localStorage: o progresso fica só na memória */
     }
   }
 
-  return { carregar, salvar };
+  return { carregar, salvar, MAPAS };
 })();

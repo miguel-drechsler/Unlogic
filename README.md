@@ -28,12 +28,13 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 | Tab | abrir e fechar o tablet |
 | H | abrir a tabela dos conectivos (ou voltar dela) |
 | R | reiniciar o andar |
-| M | mostrar e esconder o minimapa |
+| M | minimapa: local (gira com você) → completo → oculto |
+| F | tela cheia |
 | K | ligar/desligar o som |
 | 1–9 (tablet aberto) | tabela-verdade da porta · no terminal: acusar a porta |
 | 0 (tablet aberto) | voltar à visão geral |
 | Roda do mouse ou PgDn / PgUp (tablet aberto) | rolar o tablet |
-| P ou Esc | pausar (P também continua) |
+| P ou Esc | pausar (P também continua) — em tela cheia, pausa **sem sair dela** |
 
 **Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓) e desça com Enter.
 "Como jogar" e "Opções" ficam logo abaixo.
@@ -157,8 +158,16 @@ extra para cada porta da fase. Assim as portas bloqueiam **atalhos**, nunca o ú
 sempre consegue chegar a todas as alavancas, e a fase 3D tem solução sempre que a fase lógica tem.
 A mesma fase gera sempre o mesmo mapa.
 
-O **minimapa** só mostra o que já foi visto. Portas aparecem na cor da situação, alavancas
-catalogadas na cor do valor, o terminal como `T` — e a criatura só quando está perto.
+O **minimapa** só mostra o que já foi visto. No modo **local** (o padrão) ele fica centrado no
+jogador e gira junto com a câmera: a sua frente é sempre "para cima", e um marcador **N** mostra
+onde fica o norte. No modo **completo** aparece o andar inteiro com o norte fixo. Cada coisa tem
+uma forma, não só uma cor: portas são traços com o número, alavancas são círculos com a letra
+(na cor do valor), o terminal é um quadrado `T`, o elevador é o bloco `S` e a criatura é um anel
+pulsando, que só aparece quando ela está perto. A escolha do modo fica salva.
+
+**Tela cheia sem perder a pausa:** em tela cheia (F), o Esc do navegador sairia da tela cheia.
+No Chrome/Edge o jogo captura o Esc (Keyboard Lock API): um toque pausa, e para sair da tela
+cheia aperte F ou segure o Esc. Nos outros navegadores, P pausa sem sair da tela cheia.
 
 ## Criando novas fases
 Edite `js/fases.js`. As fórmulas são escritas como texto:

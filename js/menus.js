@@ -22,9 +22,10 @@ const Menus = (() => {
     [["Tab"], "abrir o tablet com as portas encontradas"],
     [["H"], "tabela dos conectivos no tablet"],
     [["R"], "reiniciar o andar na hora"],
-    [["M"], "mostrar ou esconder o minimapa"],
+    [["M"], "minimapa: local (gira com você), completo ou oculto"],
     [["K"], "ligar ou desligar o som"],
-    [["P"], "pausar (Esc também)"],
+    [["F"], "tela cheia"],
+    [["P"], "pausar sem sair da tela cheia (Esc também pausa)"],
   ];
 
   const FORMATO = {
@@ -51,6 +52,8 @@ const Menus = (() => {
       <label class="opcao"><span>Volume</span>
         <input type="range" data-opcao="volume" min="0" max="1" step="0.05">
         <output data-saida="volume"></output></label>
+      <label class="opcao-caixa"><input type="checkbox" data-opcao="telaCheia">
+        <span>Tela cheia<small>Atalho: tecla F. Esc e P pausam sem sair dela.</small></span></label>
       <label class="opcao-caixa"><input type="checkbox" data-opcao="som">
         <span>Som ligado<small>Atalho em jogo: tecla K.</small></span></label>
       <label class="opcao-caixa"><input type="checkbox" data-opcao="modoEstudo">
