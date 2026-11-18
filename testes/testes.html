@@ -117,6 +117,10 @@
 
     // ---------- 5. Fases e regras ----------
     teste("há fases cadastradas", FASES.length >= 5);
+    // A primeira fase jogada é o andar mais fundo; a última é o −1, a saída.
+    teste("andares: a fase 0 é o fundo e a última é o −1",
+      nomeDoAndar(0) === `−${FASES.length}` && nomeDoAndar(FASES.length - 1) === "−1",
+      FASES.map((_, i) => nomeDoAndar(i)).join(" "));
     FASES.forEach((fase, i) => {
       const e = Estado.criar(fase, i);
       const nomes = Object.keys(fase.alavancas);

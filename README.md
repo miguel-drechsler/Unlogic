@@ -9,7 +9,8 @@ A versão 2D original continua disponível em `classico.html` (link “Versão 2
 de lá, o botão **← Voltar ao modo 3D**, no topo, traz de volta.
 
 ## A ideia
-Você está preso no subsolo de um laboratório escuro. Em cada andar:
+Você acorda no subsolo mais fundo de um laboratório escuro, o andar −5, e precisa subir até o −1,
+onde fica a saída. Em cada andar:
 
 - cada **alavanca** na parede é uma variável proposicional (cabo para cima = V, para baixo = F);
 - cada **porta** tem uma fórmula no painel neon e abre na hora em que a fórmula fica verdadeira;
@@ -37,7 +38,7 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 | Roda do mouse ou PgDn / PgUp (tablet aberto) | rolar o tablet |
 | P ou Esc | pausar (P também continua) — em tela cheia, pausa **sem sair dela** |
 
-**Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓) e desça com Enter.
+**Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓; o −1 fica no alto) e suba com Enter.
 "Como jogar" e "Opções" ficam logo abaixo.
 **Pausa:** continuar, reiniciar o andar, opções, controles ou sair para o menu. Reiniciar e sair
 pedem um segundo clique de confirmação, porque perdem o progresso do andar.
@@ -92,23 +93,29 @@ site zera os recordes.
 | Energia limitada → apagão | Obriga a raciocinar antes de mexer: quando a energia não alcança mais nenhuma solução, as luzes apagam e a criatura corre até você |
 | Virada em falso acelera a criatura | Tentativa e erro é punida (em falso = não aproxima de nenhuma solução) |
 | Terminal "Impossível!" | Identificar **contradições** (errar custa 1 de energia) |
-| Porta sempre aberta (andar −4) | **Tautologia** (silogismo hipotético) |
-| Porta-isca (andar −4) | Parece impossível, mas abre em exatamente uma linha da tabela-verdade |
+| Porta sempre aberta (andar −2) | **Tautologia** (silogismo hipotético) |
+| Porta-isca (andar −2) | Parece impossível, mas abre em exatamente uma linha da tabela-verdade |
 | Tabela-verdade no tablet | Ferramenta estratégica (custa pontos) |
-| Alavancas com grade (andar −5) | Premissas, **modus ponens**, **modus tollens** e silogismo disjuntivo |
+| Alavancas com grade (andar −1) | Premissas, **modus ponens**, **modus tollens** e silogismo disjuntivo |
 | Tablet só mostra o que foi encontrado | Valoração parcial: fórmulas aparecem com `?` até você achar as alavancas |
 
 ### Os andares
+A ordem é a de jogo: começa no −5, o mais fundo, e termina no −1, a saída.
+
 | Andar | Conceito | Alavancas | Portas | Viradas mínimas / energia |
 |---|---|---|---|---|
-| −1 | ∧, ∨, ¬ com parênteses negados | 4 | 4 | 3 / 5 |
-| −2 | Condicional: o caminho curto usa antecedentes falsos | 5 | 5 | 3 / 5 |
+| −5 | ∧, ∨, ¬ com parênteses negados | 4 | 4 | 3 / 5 |
+| −4 | Condicional: o caminho curto usa antecedentes falsos | 5 | 5 | 3 / 5 |
 | −3 | Bicondicional: começa com 4 de 5 portas abertas, e mesmo assim faltam 4 viradas | 5 | 5 | 4 / 5 |
-| −4 | 2 contradições a selar, 1 tautologia e 1 porta-isca | 4 | 6 | 3 / 4 |
-| −5 | 2 premissas presas, dedução em cadeia e 1 contradição a selar | 6 | 7 | 4 / 4 |
+| −2 | 2 contradições a selar, 1 tautologia e 1 porta-isca | 4 | 6 | 3 / 4 |
+| −1 | 2 premissas presas, dedução em cadeia e 1 contradição a selar | 6 | 7 | 4 / 4 |
 
-Uma virada errada custa 2 de energia (ida e volta): os andares −1 e −2 perdoam um erro,
-os −3 e −4 só perdoam uma acusação errada no terminal, e o −5 não perdoa nada.
+Uma virada errada custa 2 de energia (ida e volta): os andares −5 e −4 perdoam um erro,
+os −3 e −2 só perdoam uma acusação errada no terminal, e o −1 não perdoa nada.
+
+Por dentro, cada andar continua sendo a fase de mesmo índice em `js/fases.js` (0 = a primeira
+jogada). Só a exibição mudou: `nomeDoAndar(i)` converte o índice `i` no andar `−(total − i)`.
+Por isso os recordes salvos e o mapa de cada andar continuam valendo.
 
 ### A criatura
 - Patrulha o andar e vai investigar o barulho de cada alavanca virada.
@@ -216,9 +223,11 @@ correções de consistência com o jogo 3D:
 - Correção do apagão: ele também dispara quando ainda há energia, mas não há mais
   solução possível. A mesma regra foi levada à versão 2D.
 - Selar uma contradição no terminal é gratuito e pode ser a última jogada mesmo com
-  energia zero (necessário para o caminho ótimo do andar −5).
+  energia zero (necessário para o caminho ótimo do andar −1).
 - Suíte de testes no navegador, sem depender de Node.js.
 - Versão 2D com link de volta ao modo 3D (issue #5).
+- O jogo começa no −5 e sobe até o −1, que é a saída. O painel do elevador mantém o −1
+  no alto; as setas ↑/↓ andam no sentido do painel (issue #4).
 
 Nada disso muda o núcleo: as fases continuam sendo resolvidas avaliando fórmulas
 proposicionais sobre as mesmas alavancas compartilhadas.

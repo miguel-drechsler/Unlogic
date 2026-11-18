@@ -15,7 +15,7 @@ const Hud = (() => {
   // ---------- Barra fixa ----------
   function barra(e, modoEstudo = false) {
     const resolvidas = e.portas.filter((_, i) => Estado.portaResolvida(e, i)).length;
-    $("andar").textContent = `ANDAR −${e.indice + 1} · ${e.fase.titulo}` +
+    $("andar").textContent = `ANDAR ${nomeDoAndar(e.indice)} · ${e.fase.titulo}` +
       ` · PORTAS ${resolvidas}/${e.portas.length}` + (modoEstudo ? " · ESTUDO" : "");
     let pips = "";
     for (let i = 0; i < e.fase.energia; i++) pips += `<span class="pip${i < e.energia ? " cheio" : ""}"></span>`;

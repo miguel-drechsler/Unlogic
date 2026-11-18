@@ -14,7 +14,7 @@ const FASES = require(path.join(__dirname, "..", "js", "fases.js"));
 let tudoCerto = true;
 
 FASES.forEach((fase, i) => {
-  console.log(`\n=== Fase ${i + 1}: ${fase.titulo} ===`);
+  console.log(`\n=== Fase ${i + 1} · andar ${FASES.nomeDoAndar(i)}: ${fase.titulo} ===`);
   const portas = fase.portas.map((t) => {
     const f = Logica.ler(t);
     return { f, tipo: Logica.classificar(f) };

@@ -1,5 +1,5 @@
 /*
- * fases.js — Os 5 andares do jogo
+ * fases.js — Os 5 andares do jogo, na ordem em que são jogados: do −5 (o fundo) ao −1 (a saída)
  *
  * Para criar uma fase nova, basta adicionar um objeto nesta lista:
  *   alavancas : valor inicial de cada alavanca (true = V, false = F)
@@ -10,11 +10,11 @@
  * Rode  node testes/verificador_fases.js  para conferir se todas as fases têm solução
  * com a energia disponível, e  node testes/verificar_regras.js  para simular a partida.
  *
- * Dificuldade crescente (viradas mínimas / energia):
- *   1: 3/5   2: 3/5   3: 4/5   4: 3/4 + 2 portas a selar   5: 4/4 + 1 porta a selar
+ * Dificuldade crescente (viradas mínimas / energia), por andar:
+ *   −5: 3/5   −4: 3/5   −3: 4/5   −2: 3/4 + 2 portas a selar   −1: 4/4 + 1 porta a selar
  * Uma virada errada custa 2 de energia (ida e volta). Então a folga de 2 dos andares
- * 1 e 2 perdoa um erro; a folga de 1 dos andares 3 e 4 só perdoa uma acusação errada
- * no terminal; o andar 5 não perdoa nada.
+ * −5 e −4 perdoa um erro; a folga de 1 dos andares −3 e −2 só perdoa uma acusação errada
+ * no terminal; o andar −1 não perdoa nada.
  * Evite chamar uma alavanca de V ou F: confunde com os valores.
  */
 const FASES = [
@@ -107,4 +107,19 @@ const FASES = [
   },
 ];
 
-if (typeof module !== "undefined") module.exports = FASES;
+/*
+ * Índice da fase -> nome do andar. A ordem de FASES é a ordem em que se joga:
+ * a fase 0 é o andar mais fundo e a última é o −1, a saída do laboratório.
+ *   nomeDoAndar(0) === "−5"   ...   nomeDoAndar(FASES.length - 1) === "−1"
+ * Recordes e sementes do labirinto continuam indexados pela fase (0, 1, 2...),
+ * então mudar só a exibição não exige migrar nada. Use sempre este helper.
+ */
+function nomeDoAndar(indice) {
+  return `−${FASES.length - indice}`; // "−" tipográfico (U+2212), não o hífen
+}
+
+if (typeof module !== "undefined") {
+  module.exports = FASES;
+  // Sem enumerar: quem percorre a lista de fases continua vendo só as fases.
+  Object.defineProperty(module.exports, "nomeDoAndar", { value: nomeDoAndar });
+}

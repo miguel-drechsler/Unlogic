@@ -18,7 +18,7 @@ let tudoCerto = true;
 const conferir = (ok, msg) => { if (!ok) { console.log("  ERRO: " + msg); tudoCerto = false; } };
 
 FASES.forEach((fase, i) => {
-  console.log(`\n=== Fase ${i + 1}: ${fase.titulo} ===`);
+  console.log(`\n=== Fase ${i + 1} · andar ${FASES.nomeDoAndar(i)}: ${fase.titulo} ===`);
   const nomes = Object.keys(fase.alavancas);
   const livres = nomes.filter((n) => !fase.presas.includes(n));
   const diferencas = (e, s) => nomes.filter((n) => s[n] !== e.valores[n]);
