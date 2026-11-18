@@ -40,8 +40,21 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 
 **Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓; o −1 fica no alto) e suba com Enter.
 "Como jogar" e "Opções" ficam logo abaixo.
-**Pausa:** continuar, reiniciar o andar, opções, controles ou sair para o menu. Reiniciar e sair
-pedem um segundo clique de confirmação, porque perdem o progresso do andar.
+**Pausa:** continuar, ver o manual do andar, reiniciar o andar, opções, controles ou sair para o menu.
+Reiniciar e sair pedem um segundo clique de confirmação, porque perdem o progresso do andar.
+
+### Manual "Neste andar"
+O "Como jogar" da tela de início abre com um bloco **Neste andar**, que muda com o andar
+escolhido no elevador, inclusive se você trocar de andar com o manual aberto. A pausa mostra
+o mesmo bloco em "Neste andar". Ele é gerado a partir da fase (`js/manual.js`):
+- conceito e texto da fase, mais o campo opcional `manual` (texto escrito à mão em `js/fases.js`);
+- os conectivos que aparecem nas portas;
+- as mecânicas especiais: alavancas presas, porta impossível (terminal) e tautologia;
+- a folga de energia em linguagem de jogo ("dá para errar uma virada e desfazê-la").
+
+O manual nunca entrega a solução: não mostra valores de alavanca, não diz quais portas são
+contradições (nem quantas) e não informa o número mínimo de viradas. A suíte
+`testes/testes.html` confere isso em todos os andares.
 
 Em "Opções" (no início e na pausa) há **sensibilidade do mouse**, **volume**, **som ligado** e
 **modo estudo**. Tudo isso e os recordes de cada andar ficam salvos no navegador (`js/progresso.js`).
@@ -146,6 +159,7 @@ js/mundo.js                o andar em 3D; liga portas e alavancas ao motor lógi
 js/jogador.js              movimentação em primeira pessoa e colisão
 js/monstro.js              modelo e IA da criatura
 js/hud.js                  bateria, avisos e tablet
+js/manual.js               bloco "Neste andar" do manual, gerado a partir da fase
 js/menus.js                tela de início (painel do elevador) e menu de pausa
 js/minimapa.js             minimapa com névoa de exploração
 js/texturas.js             texturas desenhadas em canvas (inclui o painel das portas)
@@ -181,12 +195,15 @@ cheia aperte F ou segure o Esc. Nos outros navegadores, P pausa sem sair da tela
 Edite `js/fases.js`. As fórmulas são escritas como texto:
 `!` (não), `&` (e), `|` (ou), `->` (se...então), `<->` (se e somente se).
 Exemplo: `"(A & !B) | C"`. O labirinto, as alavancas e as portas do novo andar são gerados sozinhos.
+O campo opcional `manual` acrescenta um texto seu ao bloco "Neste andar"; o resto do bloco
+também é gerado sozinho. Não escreva a solução nele.
 
 Depois, para conferir tudo:
 
 **Sem instalar nada:** abra `testes/testes.html` no navegador (dois cliques). A suíte
 testa o parser, a precedência, as tabelas-verdade, a classificação, as regras de
-energia/vitória/apagão e a existência de solução em todas as fases.
+energia/vitória/apagão, a existência de solução em todas as fases e o manual "Neste andar"
+(que ele cite os conectivos certos e não vaze a solução).
 
 **Com Node.js instalado:**
 ```
@@ -228,6 +245,7 @@ correções de consistência com o jogo 3D:
 - Versão 2D com link de volta ao modo 3D (issue #5).
 - O jogo começa no −5 e sobe até o −1, que é a saída. O painel do elevador mantém o −1
   no alto; as setas ↑/↓ andam no sentido do painel (issue #4).
+- Manual "Neste andar", diferente para cada andar, no "Como jogar" e na pausa (issue #6).
 
 Nada disso muda o núcleo: as fases continuam sendo resolvidas avaliando fórmulas
 proposicionais sobre as mesmas alavancas compartilhadas.

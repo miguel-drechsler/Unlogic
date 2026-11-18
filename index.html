@@ -59,6 +59,8 @@
 
           <section class="vista" data-vista="ajuda" hidden>
             <h2 class="vista-titulo">Como jogar</h2>
+            <!-- Muda com o andar do elevador (menus.js + manual.js) -->
+            <div class="neste-andar" data-manual aria-live="polite"></div>
             <div class="ajuda">
               <div>
                 <h3>O objetivo</h3>
@@ -119,11 +121,16 @@
         <div class="vistas" data-vistas>
           <nav class="vista pausa-acoes" data-vista="acoes" aria-label="Menu de pausa">
             <button class="acao-lista primaria" data-acao="continuar">Continuar</button>
+            <button class="acao-lista" data-abrir="manual">Neste andar</button>
             <button class="acao-lista" data-acao="reiniciar">Reiniciar andar</button>
             <button class="acao-lista" data-abrir="opcoes">Opções</button>
             <button class="acao-lista" data-abrir="controles">Controles</button>
             <button class="acao-lista" data-acao="menu">Sair para o menu</button>
           </nav>
+          <section class="vista" data-vista="manual" hidden>
+            <div class="neste-andar" data-manual></div>
+            <button class="acao-texto" data-voltar>Voltar</button>
+          </section>
           <section class="vista" data-vista="opcoes" hidden>
             <h3 class="vista-titulo">Opções</h3>
             <div data-opcoes></div>
@@ -165,6 +172,7 @@
   <script src="js/monstro.js"></script>
   <script src="js/minimapa.js"></script>
   <script src="js/hud.js"></script>
+  <script src="js/manual.js"></script>  <!-- resumo "Neste andar" -->
   <script src="js/menus.js"></script>   <!-- tela de início e pausa -->
   <script src="js/jogo3d.js"></script>
 </body>

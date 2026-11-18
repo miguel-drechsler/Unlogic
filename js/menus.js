@@ -7,8 +7,10 @@
  * As opções são sliders (sensibilidade, volume) e caixas (som, modo estudo).
  *
  * Cada tela tem "vistas" trocáveis ([data-vistas] > .vista[data-vista]):
- *   início: andar (padrão) · ajuda · opcoes        pausa: acoes (padrão) · opcoes · controles
+ *   início: andar (padrão) · ajuda · opcoes        pausa: acoes (padrão) · manual · opcoes · controles
  * As opções e a lista de controles são geradas aqui uma vez e aparecem nas duas telas.
+ * O bloco "Neste andar" ([data-manual], conteúdo de manual.js) aparece no "Como jogar"
+ * do início e na pausa; ele é refeito sempre que o andar escolhido muda.
  */
 const Menus = (() => {
   const $ = (id) => document.getElementById(id);
@@ -66,6 +68,31 @@ const Menus = (() => {
       else el.value = opcoes[el.dataset.opcao];
     });
     document.querySelectorAll("[data-saida]").forEach((el) => { el.textContent = FORMATO[el.dataset.saida](opcoes[el.dataset.saida]); });
+  }
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  // "Neste andar": manual.js decide o conteúdo (sem entregar a solução); aqui só vira HTML.
+  function htmlManual(indice) {
+    const r = Manual.resumo(FASES[indice], indice);
+    const mecanicas = r.mecanicas.length
+      ? `<ul>${r.mecanicas.map((m) => `<li>${esc(m)}</li>`).join("")}</ul>`
+      : "Nenhuma: só alavancas e portas.";
+    const conectivos = r.conectivos.map((c) => `<span class="na-conectivo"><b>${c.simbolo}</b> ${esc(c.nome)}</span>`).join("");
+    return `
+      <h3 class="na-titulo">Neste andar <span>${esc(r.andar)} · ${esc(r.titulo)}</span></h3>
+      <p class="na-conceito">${esc(r.conceito)}</p>
+      ${r.manual ? `<p class="na-manual">${esc(r.manual)}</p>` : ""}
+      <p>${esc(r.texto)}</p>
+      <dl class="na-ficha">
+        <div><dt>Conectivos nas portas</dt><dd>${conectivos}</dd></div>
+        <div><dt>Mecânicas especiais</dt><dd>${mecanicas}</dd></div>
+        <div><dt>Energia: ${r.energia.total}</dt><dd>${esc(r.energia.frase)}</dd></div>
+      </dl>`;
+  }
+
+  function mostrarManual(tela, indice) {
+    tela.querySelectorAll("[data-manual]").forEach((el) => { el.innerHTML = htmlManual(indice); });
   }
 
   // O painel do elevador: −1 no alto, o andar mais fundo embaixo, como num elevador de verdade.
@@ -170,6 +197,7 @@ const Menus = (() => {
       ["Recorde", melhores[indice] !== null ? `${melhores[indice]} pts` : "nenhum"],
     ];
     $("andarFicha").innerHTML = ficha.map(([nome, valor]) => `<div><dt>${nome}</dt><dd>${valor}</dd></div>`).join("");
+    mostrarManual($("telaInicio"), indice); // acompanha a troca de andar mesmo com o manual aberto
     // O jogador acorda no fundo: o primeiro andar é "começar", os outros são "subir".
     $("btnJogar").textContent = indice === 0
       ? `Começar no andar ${nomeDoAndar(indice)}`
@@ -198,6 +226,7 @@ const Menus = (() => {
     if (!mostrar) return desfazerConfirmacao();
     selecionado = e.indice;
     $("pausaAndar").textContent = `Andar ${nomeDoAndar(e.indice)}: ${e.fase.titulo}`;
+    mostrarManual($("telaPausa"), e.indice);
     $("pausaMotivo").hidden = !motivo;
     $("pausaMotivo").textContent = motivo || "";
 
