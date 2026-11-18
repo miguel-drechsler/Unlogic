@@ -133,8 +133,25 @@ Por isso os recordes salvos e o mapa de cada andar continuam valendo.
 ### A criatura
 - Patrulha o andar e vai investigar o barulho de cada alavanca virada.
 - Começa a caçar quando o caminho até você fica curto; caçando, é mais lenta que o seu passo
-  normal — até você errar. Cada virada em falso e cada acusação errada a aceleram.
-- Uma caçada dura no máximo 12 s; depois ela cansa, recua e fica 10 s sem caçar.
+  normal — até você errar. Cada virada em falso e cada acusação errada a aceleram, mas nem com
+  muitos erros ela alcança a sua corrida.
+- Fica parada alguns segundos no começo do andar. Uma caçada tem duração máxima; depois ela
+  cansa, recua e passa um tempo sem caçar.
+- **Fica mais perigosa a cada andar** (`Monstro.dificuldade` em `js/monstro.js`). A ficha do
+  andar e o manual "Neste andar" mostram o nível:
+
+  | Andar | Nível | Trégua inicial | Patrulha / caça / teto (m/s) | Caça a partir de | Caçada / descanso | Ronda perto de você |
+  |---|---|---|---|---|---|---|
+  | −5 | lenta | 8 s | 1,6 / 2,6 / 5,0 | 4 tiles | 9 s / 13 s | 20% |
+  | −4 | lenta | 7 s | 1,8 / 2,8 / 5,3 | 5 tiles | 10,5 s / 11,5 s | 28% |
+  | −3 | atenta | 6 s | 2,0 / 3,1 / 5,5 | 6 tiles | 12 s / 10 s | 35% |
+  | −2 | atenta | 5 s | 2,1 / 3,3 / 5,8 | 6 tiles | 13,5 s / 8,5 s | 42% |
+  | −1 | implacável | 4 s | 2,3 / 3,5 / 6,0 | 7 tiles | 15 s / 7 s | 50% |
+
+  O −3 equivale à criatura antiga, de valores fixos. Dois limites nunca mudam, porque mantêm
+  todo andar vencível: sem erros, ela caça mais devagar que o seu passo (4,0 m/s); com erros,
+  o teto fica abaixo da sua corrida (6,4 m/s). A trégua (parada inicial, fim da caçada e
+  descanso) existe em todos os andares. O modo estudo continua desligando a criatura.
 - Portas fechadas a bloqueiam; portas abertas são atalho para ela também. Se uma porta fecha
   no meio da rota (ou com ela no vão), ela recua e procura outro caminho.
 - Os andares não têm becos sem saída: sempre existe uma segunda rota de fuga.
@@ -170,6 +187,8 @@ testes/testes.html            suíte que roda no navegador, sem Node.js (parser,
 testes/verificador_fases.js   confere se toda fase tem solução com a energia dada
 testes/verificar_labirinto.js confere se o mapa de cada fase é jogável (e sem becos)
 testes/verificar_regras.js    simula partidas: caminho ótimo, viradas erradas, apagão
+testes/verificar_criatura.js  confere a dificuldade da criatura em cada andar e os limites
+testes/jogar_andares.js       um bot joga os andares no ?demo com a criatura ligada (Chrome/Edge)
 ```
 
 ### Como o mapa nasce das fases
@@ -210,7 +229,14 @@ energia/vitória/apagão, a existência de solução em todas as fases e o manua
 node testes/verificador_fases.js     # a fase tem solução? quantos movimentos no mínimo?
 node testes/verificar_labirinto.js   # desenha o mapa e confere se tudo é alcançável
 node testes/verificar_regras.js      # simula a partida com as regras do jogo
+node testes/verificar_criatura.js    # a criatura cresce a cada andar sem passar dos limites?
 ```
+
+**Bot jogando de verdade (opcional):** `node testes/jogar_andares.js [rodadas]` abre o
+`index.html?demo` num Chrome ou Edge sem janela (já instalado; nenhum pacote npm) e joga cada
+andar com a criatura ligada. O bot conhece o mapa e a solução, nunca erra uma virada e foge
+quando a criatura chega perto, usando as mesmas teclas e colisão do jogador. Ser pego não
+reprova o andar; reprova não vencer em 15 minutos de jogo simulado.
 
 ## Versão clássica 2D
 `classico.html` mantém o puzzle original. Ela ganhou um link **← Voltar ao modo 3D** no topo
@@ -226,7 +252,7 @@ correções de consistência com o jogo 3D:
 - O painel do elevador na tela de início pula para qualquer andar (pela pausa: "Sair para o menu").
 - `H` abre a tabela dos conectivos a qualquer momento durante a partida.
 - `index.html?demo` roda sem travar o mouse e expõe `depurar` no console do navegador
-  (`depurar.passos = 8` acelera a simulação; foi assim que um bot jogou os cinco andares).
+  (`depurar.passos = 8` acelera a simulação). É assim que `testes/jogar_andares.js` joga os cinco andares.
 
 ## O que mudou nesta versão
 - Ajudas de raciocínio no tablet: avaliação passo a passo da valoração atual,
@@ -246,6 +272,8 @@ correções de consistência com o jogo 3D:
 - O jogo começa no −5 e sobe até o −1, que é a saída. O painel do elevador mantém o −1
   no alto; as setas ↑/↓ andam no sentido do painel (issue #4).
 - Manual "Neste andar", diferente para cada andar, no "Como jogar" e na pausa (issue #6).
+- A criatura fica mais perigosa a cada andar (lenta → atenta → implacável), sem passar dos
+  limites que mantêm o jogo vencível; um bot confere isso jogando no `?demo` (issue #3).
 
 Nada disso muda o núcleo: as fases continuam sendo resolvidas avaliando fórmulas
 proposicionais sobre as mesmas alavancas compartilhadas.

@@ -8,26 +8,61 @@
  *   fúria       acabou a energia: corre direto para o jogador (ver `furia`)
  *
  * Regras de trégua (sem elas o andar não é vencível — conferido com um bot):
- *   - a caçada dura no máximo FOLEGO segundos; depois a criatura cansa e recua;
+ *   - no começo do andar ela fica `tregua` segundos parada;
+ *   - a caçada dura no máximo `folego` segundos; depois a criatura cansa e recua;
  *   - ela também desiste se o jogador abrir distância por PACIENCIA segundos;
- *   - depois de desistir, fica DESCANSO segundos sem caçar e vai patrulhar longe.
+ *   - depois de desistir, fica `descanso` segundos sem caçar e vai patrulhar longe.
+ *
+ * Dificuldade por andar: Monstro.dificuldade(indice, total) interpola CURVA do primeiro
+ * andar jogado (−5, "lenta") ao último (−1, "implacável"). O andar do meio fica perto da
+ * criatura antiga, de constantes fixas. Dois limites nunca mudam, porque mantêm o andar
+ * vencível: caçando sem erros ela é mais lenta que o PASSO do jogador, e mesmo no teto
+ * (com muitos erros) é mais lenta que a CORRIDA dele. O modo estudo continua desligando-a
+ * (jogo3d.js nem chama atualizar).
  *
  * O caminho é recalculado a cada 0,3 s com Labirinto.caminho (A* no grid).
  * Portas fechadas são paredes para o monstro; abertas viram atalho para ele também.
  * Cada virada errada (Estado.viradasErradas) e cada acusação errada aumenta a velocidade.
  */
 const Monstro = (() => {
+  const J = typeof Jogador !== "undefined" ? Jogador : require("./jogador.js");
   const REPENSAR = 0.3;        // s entre recálculos do A*
-  const FAREJA = 5;            // tiles de caminho para começar a caçar
-  const DESISTE = 8;           // tiles de caminho para começar a desistir...
+  const DESISTE = 8;           // tiles de caminho para começar a desistir (> maior `fareja`)...
   const PACIENCIA = 2;         // ...depois de tantos segundos longe
-  const FOLEGO = 12;           // s: duração máxima de uma caçada
-  const DESCANSO = 10;         // s sem caçar depois de desistir
-  const RONDA_PERTO = 0.35;    // chance de a patrulha escolher um destino perto do jogador
-  const VEL_PATRULHA = 1.9, VEL_CACA = 3.0, VEL_FURIA = 9;
+  const VEL_FURIA = 9;
   const GANHO_PATRULHA = 0.2, GANHO_CACA = 0.4; // m/s a mais por erro do jogador
-  const TETO_CACA = 6.0;       // abaixo da corrida do jogador (6,4): ainda dá para fugir
   const ALCANCE = 1.1;         // distância em que ele pega o jogador
+
+  // [primeiro andar jogado, último andar]. Cada valor cresce (ou a trégua encolhe) de um ao outro.
+  const CURVA = {
+    tregua:      [8, 4],       // s parada no começo do andar
+    velPatrulha: [1.6, 2.3],   // m/s
+    velCaca:     [2.6, 3.5],   // m/s caçando, sem erros do jogador (passo dele: 4,0)
+    tetoCaca:    [5.0, 6.0],   // m/s caçando, com erros (corrida dele: 6,4)
+    fareja:      [4, 7],       // tiles de caminho para começar a caçar
+    folego:      [9, 15],      // s: duração máxima de uma caçada
+    descanso:    [13, 7],      // s sem caçar depois de desistir
+    rondaPerto:  [0.2, 0.5],   // chance de a patrulha escolher um destino perto do jogador
+  };
+  const FOLGA_FUGA = 0.3;      // m/s que a criatura sempre fica abaixo do passo e da corrida
+  const TREGUA_MIN = 2;        // s: a trégua inicial nunca some
+  const DESCANSO_MIN = 4;      // s: nem o descanso depois de uma caçada
+  const NIVEIS = [[0.3, "lenta"], [0.8, "atenta"], [Infinity, "implacável"]];
+
+  // Parâmetros da criatura no andar `indice` (0 = primeira fase jogada) de `total`.
+  function dificuldade(indice, total) {
+    const t = total > 1 ? Math.max(0, Math.min(1, indice / (total - 1))) : 0;
+    const p = {};
+    for (const [nome, [primeiro, ultimo]] of Object.entries(CURVA)) p[nome] = primeiro + (ultimo - primeiro) * t;
+    p.fareja = Math.min(DESISTE - 1, Math.round(p.fareja)); // começa a caçar antes do ponto de desistir
+    // Os limites que mantêm o andar vencível valem mesmo que alguém edite a CURVA.
+    p.velCaca = Math.min(p.velCaca, J.ANDAR - FOLGA_FUGA);
+    p.tetoCaca = Math.max(p.velCaca, Math.min(p.tetoCaca, J.CORRER - FOLGA_FUGA));
+    p.tregua = Math.max(TREGUA_MIN, p.tregua);
+    p.descanso = Math.max(DESCANSO_MIN, p.descanso); // depois de cansar, sempre há respiro
+    p.nivel = NIVEIS.find(([limite]) => t < limite)[1];
+    return p;
+  }
 
   // Tudo feito de primitivas: manto torneado com franja rasgada, crânio alongado com
   // órbitas fundas e pupilas em brasa, dentes, braços com cotovelo e garras.
@@ -102,11 +137,14 @@ const Monstro = (() => {
     const T = Mundo.T, centro = Mundo.centro;
     let modo, rota, destino, repensar, perdido, dormindo, cacando = 0, descanso = 0, mesmoTile = false, relogio = 0, andado = 0, guinada = 0;
     let rotaComRecuo = false; // a rota atual já começa saindo de um vão de porta fechada
+    let dif = dificuldade(0, 1); // parâmetros do andar atual (ver reposicionar)
 
-    function reposicionar(tile, espera = 4) {
+    // Começo de um andar: `parametros` vem de Monstro.dificuldade(indice, total).
+    function reposicionar(tile, parametros = dificuldade(0, 1)) {
+      dif = parametros;
       g.position.set(centro(tile.x), 0, centro(tile.z));
       modo = "patrulha"; rota = []; destino = null; repensar = 0; perdido = 0; cacando = 0; descanso = 0; rotaComRecuo = false;
-      dormindo = espera; // segundos de trégua no começo do andar
+      dormindo = dif.tregua; // segundos de trégua no começo do andar
       guinada = 0;
       g.rotation.y = 0;
       boca.scale.y = 1.7;
@@ -131,7 +169,7 @@ const Monstro = (() => {
         }
         return longe;
       }
-      if (Math.random() < RONDA_PERTO) {
+      if (Math.random() < dif.rondaPerto) {
         const perto = celulas.filter((t) => Math.abs(t.x - c.tileJogador.x) + Math.abs(t.z - c.tileJogador.z) <= 8);
         if (perto.length) return perto[Math.floor(Math.random() * perto.length)];
       }
@@ -140,8 +178,8 @@ const Monstro = (() => {
 
     function velocidade(c) {
       if (c.furia) return VEL_FURIA;
-      if (modo === "caca") return Math.min(TETO_CACA, VEL_CACA + GANHO_CACA * c.erros);
-      return Math.min(4, VEL_PATRULHA + GANHO_PATRULHA * c.erros);
+      if (modo === "caca") return Math.min(dif.tetoCaca, dif.velCaca + GANHO_CACA * c.erros);
+      return Math.min(4, dif.velPatrulha + GANHO_PATRULHA * c.erros);
     }
 
     // c = { lab, passavel(tx,tz), jogador:{x,z}, tileJogador:{x,z}, furia, erros, aoPisar(dist) }
@@ -177,14 +215,14 @@ const Monstro = (() => {
         const tiles = ateJogador ? ateJogador.length : Infinity;
 
         descanso = Math.max(0, descanso - REPENSAR);
-        if (c.furia || (modo !== "caca" && descanso === 0 && tiles <= FAREJA)) {
+        if (c.furia || (modo !== "caca" && descanso === 0 && tiles <= dif.fareja)) {
           if (modo !== "caca") { c.aoAvistar(); cacando = 0; }
           modo = "caca"; perdido = 0;
         } else if (modo === "caca") {
           cacando += REPENSAR;
           perdido = tiles > DESISTE ? perdido + REPENSAR : 0;
-          if (perdido > PACIENCIA || cacando > FOLEGO) { // perdeu o rastro ou cansou: recua
-            modo = "patrulha"; destino = null; descanso = DESCANSO;
+          if (perdido > PACIENCIA || cacando > dif.folego) { // perdeu o rastro ou cansou: recua
+            modo = "patrulha"; destino = null; descanso = dif.descanso;
           }
         }
 
@@ -270,5 +308,7 @@ const Monstro = (() => {
     };
   }
 
-  return { criar };
+  return { criar, dificuldade };
 })();
+
+if (typeof module !== "undefined") module.exports = Monstro;

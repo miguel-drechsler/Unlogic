@@ -4,7 +4,8 @@
  * Gera, a partir dos dados da fase, um resumo do andar escolhido:
  *   conceito e texto da fase, o campo opcional `manual` (texto escrito à mão),
  *   os conectivos que aparecem nas portas, as mecânicas especiais (alavancas
- *   presas, terminal de contradição, tautologia) e a folga de energia.
+ *   presas, terminal de contradição, tautologia), a folga de energia e o nível
+ *   da criatura (lenta / atenta / implacável, de Monstro.dificuldade).
  *
  * Regra de ouro: NUNCA entregar a solução. Nada de valores corretos das
  * alavancas, nada de dizer QUAIS portas são contradições (nem quantas: as
@@ -18,6 +19,16 @@ const Manual = (() => {
   const L = typeof Logica !== "undefined" ? Logica : require("./logica.js");
   const E = typeof Estado !== "undefined" ? Estado : require("./estado.js");
   const andar = typeof nomeDoAndar !== "undefined" ? nomeDoAndar : require("./fases.js").nomeDoAndar;
+  const M = typeof Monstro !== "undefined" ? Monstro : require("./monstro.js");
+  const total = () => (typeof FASES !== "undefined" ? FASES : require("./fases.js")).length;
+
+  // O nível vem de Monstro.dificuldade; a frase traduz os parâmetros em comportamento.
+  const CRIATURA = {
+    lenta: "Demora a acordar, anda devagar e cansa logo de caçar.",
+    atenta: "Acorda mais cedo, fareja de mais longe e caça por mais tempo.",
+    implacável: "Quase não dá trégua, ronda perto de você e demora a cansar. " +
+      "Mesmo assim, sem erros seus, ela caça mais devagar que o seu passo.",
+  };
 
   // Na ordem da precedência (a mesma da referência do tablet, tecla H).
   const CONECTIVOS = [
@@ -93,7 +104,13 @@ const Manual = (() => {
       conectivos: conectivos(arvores),
       mecanicas: mecanicas(fase, tipos),
       energia: energia(fase, indice, tipos.includes("contradicao")),
+      criatura: criatura(indice),
     };
+  }
+
+  function criatura(indice) {
+    const { nivel } = M.dificuldade(indice, total());
+    return { nivel, frase: `${CRIATURA[nivel]} No modo estudo ela fica desligada.` };
   }
 
   return { resumo };

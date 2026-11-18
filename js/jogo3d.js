@@ -190,7 +190,7 @@
       .find(([x, z]) => mundo.passavel(lab.inicio.x + x, lab.inicio.z + z));
     guinadaInicial = Math.atan2(-dx, -dz);
     jogador.posicionar(centro(lab.inicio.x), centro(lab.inicio.z), guinadaInicial);
-    monstro.reposicionar(lab.monstro, 6);
+    monstro.reposicionar(lab.monstro, Monstro.dificuldade(indice, FASES.length)); // cresce a cada andar
 
     visto = Minimapa.novaVisao(lab);
     ultimoTile = -1;

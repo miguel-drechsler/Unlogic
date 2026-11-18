@@ -307,10 +307,9 @@ body[data-modo="menu"] #hud, body[data-modo="menu"] #perigo { opacity: 0; }
 }
 .andar-conceito { margin: 6px 0 22px; font-size: 17px; color: var(--aco-claro); }
 .ficha {
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-  justify-content: start;
-  gap: 10px 34px;
+  display: flex;      /* cinco itens: quebra a linha sozinha quando não cabem */
+  flex-wrap: wrap;
+  gap: 10px 30px;
   margin: 0 0 30px;
   padding: 14px 0;
   border-block: 1px solid rgba(217, 210, 193, 0.14);
@@ -597,7 +596,7 @@ kbd {
   #rodape span { display: none; }
   #tablet { top: auto; height: 62vh; }
   #minimapa { width: 120px; height: 120px; }
-  .ficha { grid-template-columns: repeat(2, auto); }
+  .ficha { gap: 10px 24px; }
   .botao-andar {
     width: 48px;
     height: 48px;

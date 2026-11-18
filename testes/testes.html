@@ -37,6 +37,8 @@
   <script src="../js/logica.js"></script>
   <script src="../js/fases.js"></script>
   <script src="../js/estado.js"></script>
+  <script src="../js/jogador.js"></script>   <!-- só as constantes: nada de Three.js aqui -->
+  <script src="../js/monstro.js"></script>
   <script src="../js/manual.js"></script>
   <script>
   (() => {
@@ -195,7 +197,7 @@
       const r = Manual.resumo(fase, i);
       const andar = `andar ${nomeDoAndar(i)}`;
       // O que o manual GERA (o texto da fase e o manual escrito à mão vêm prontos).
-      const gerado = [...r.mecanicas, r.energia.frase, ...r.conectivos.map((c) => c.nome)].join(" ");
+      const gerado = [...r.mecanicas, r.energia.frase, r.criatura.frase, ...r.conectivos.map((c) => c.nome)].join(" ");
       const tudo = [r.texto, r.manual || "", gerado].join(" ");
 
       // Conectivos conferidos direto no texto das fórmulas, sem passar pelo parser.
@@ -227,6 +229,40 @@
       const k = FASES.findIndex((f, i) => Manual.resumo(f, i).energia.folga === 0);
       teste("manual: andar sem folga avisa que cada virada precisa estar certa",
         k >= 0 && /não sobra/.test(Manual.resumo(FASES[k], k).energia.frase));
+    }
+
+    // ---------- 9. Dificuldade da criatura por andar ----------
+    {
+      const n = FASES.length;
+      const p = FASES.map((_, i) => Monstro.dificuldade(i, n));
+      p.forEach((d, i) => {
+        const andar = `andar ${nomeDoAndar(i)}`;
+        teste(`${andar}: caçando sem erros, a criatura é mais lenta que o passo do jogador`,
+          d.velCaca < Jogador.ANDAR, `${d.velCaca} ≥ ${Jogador.ANDAR}`);
+        teste(`${andar}: o teto de caça é menor que a corrida do jogador`,
+          d.tetoCaca < Jogador.CORRER && d.tetoCaca >= d.velCaca, `teto ${d.tetoCaca}`);
+        teste(`${andar}: a trégua continua existindo (início, fôlego e descanso)`,
+          d.tregua > 0 && Number.isFinite(d.folego) && d.folego > 0 && d.descanso > 0);
+        teste(`${andar}: o manual mostra o nível da criatura`,
+          Manual.resumo(FASES[i], i).criatura.nivel === d.nivel);
+      });
+      // Do primeiro andar jogado ao último, nada fica mais fácil (e o último é mais difícil).
+      const sobe = ["velPatrulha", "velCaca", "tetoCaca", "fareja", "folego", "rondaPerto"];
+      const desce = ["tregua", "descanso"];
+      const ruins = [];
+      for (let i = 1; i < n; i++) {
+        sobe.forEach((k) => { if (p[i][k] < p[i - 1][k]) ruins.push(`${k} cai no ${nomeDoAndar(i)}`); });
+        desce.forEach((k) => { if (p[i][k] > p[i - 1][k]) ruins.push(`${k} sobe no ${nomeDoAndar(i)}`); });
+      }
+      teste("criatura: a dificuldade cresce a cada andar", ruins.length === 0, ruins.join(", "));
+      teste("criatura: o último andar é mais difícil que o primeiro em tudo",
+        sobe.every((k) => p[n - 1][k] > p[0][k]) && desce.every((k) => p[n - 1][k] < p[0][k]));
+      teste("criatura: lenta no primeiro andar, implacável no último",
+        p[0].nivel === "lenta" && p[n - 1].nivel === "implacável" &&
+        p.every((d) => ["lenta", "atenta", "implacável"].includes(d.nivel)));
+      const fora = Monstro.dificuldade(99, n); // índice além do último: continua dentro dos limites
+      teste("criatura: limites valem até fora da curva",
+        fora.velCaca < Jogador.ANDAR && fora.tetoCaca < Jogador.CORRER && fora.tregua > 0);
     }
 
     // ---------- Resultado ----------
