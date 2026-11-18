@@ -96,7 +96,7 @@ const Menus = (() => {
     tela.querySelectorAll("[data-manual]").forEach((el) => { el.innerHTML = htmlManual(indice); });
   }
 
-  // O painel do elevador: −1 no alto, o andar mais fundo embaixo, como num elevador de verdade.
+  // O painel do elevador: T no alto, o andar mais fundo embaixo, como num elevador de verdade.
   // A fase 0 (a primeira jogada) é o fundo, então os botões saem na ordem inversa de FASES.
   // --i é a posição na tela (de cima para baixo), usada na animação que liga os botões.
   function montarElevador() {
@@ -191,10 +191,13 @@ const Menus = (() => {
     $("andarNumero").textContent = `Andar ${nomeDoAndar(indice)} · etapa ${indice + 1} de ${FASES.length}`;
     $("andarTitulo").textContent = f.titulo;
     $("andarConceito").textContent = f.conceito;
+    // Energia conta viradas, não alavancas: a ficha mostra o mínimo ao lado para comparar.
+    const minimo = Estado.distanciaDaSolucao(Estado.criar(f, indice));
     const ficha = [
-      ["Alavancas", Object.keys(f.alavancas).length],
+      ["Alavancas", f.presas.length ? `${Object.keys(f.alavancas).length} <small>(${f.presas.length} presas)</small>` : Object.keys(f.alavancas).length],
       ["Portas", f.portas.length],
-      ["Energia", f.energia],
+      ["Energia", `${f.energia} <small>viradas</small>`],
+      ["Mínimo", `${minimo} <small>viradas</small>`],
       ["Criatura", Monstro.dificuldade(indice, FASES.length).nivel],
       ["Recorde", melhores[indice] !== null ? `${melhores[indice]} pts` : "nenhum"],
     ];
@@ -258,7 +261,7 @@ const Menus = (() => {
     }
     if (modo === "menu" && (ev.code === "ArrowUp" || ev.code === "ArrowDown")) {
       ev.preventDefault();
-      // ↑ sobe no painel (rumo ao −1, a última fase); ↓ desce (rumo ao fundo, a fase 0).
+      // ↑ sobe no painel (rumo ao T, a última fase); ↓ desce (rumo ao fundo, a fase 0).
       const i = Math.max(0, Math.min(FASES.length - 1, selecionado + (ev.code === "ArrowUp" ? 1 : -1)));
       if (i !== selecionado) cb.escolherAndar(i);
       return true;

@@ -124,7 +124,7 @@ const Estado = (() => {
     if (agora === "vitoria") return { ok: false, motivo: "vitoria" };
     const { tipo } = e.portas[i];
     // Selar uma contradição é de graça e pode ser a última jogada mesmo com
-    // energia zero (o andar −1, o último, termina exatamente assim).
+    // energia zero (quem gastou toda a folga no andar T termina exatamente assim).
     if (tipo === "contradicao") {
       e.seladas.add(i);
       return { ok: true, correto: true, tipo };

@@ -6,7 +6,7 @@
  *   - caçando sem erros do jogador, ela é mais lenta que o PASSO dele;
  *   - mesmo no teto (com muitos erros), é mais lenta que a CORRIDA dele;
  *   - a trégua continua existindo: parada no começo, caçada com fim e descanso depois.
- * E a curva: do primeiro andar jogado (−5) ao último (−1), nada fica mais fácil.
+ * E a curva: do primeiro andar jogado (−4) ao último (T), nada fica mais fácil.
  * Para ver um bot jogando os andares de verdade:  node testes/jogar_andares.js
  */
 const path = require("path");

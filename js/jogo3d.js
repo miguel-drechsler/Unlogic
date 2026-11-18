@@ -517,7 +517,7 @@
           <tr class="soma"><td>Pontos do andar</td><td>${pts}</td></tr>
         </table>`,
       botoes: ultima
-        ? [["Sair do laboratório", mostrarFinal], repetir, menu] // o −1 é a saída
+        ? [["Sair do laboratório", mostrarFinal], repetir, menu] // o T é a saída
         : [[`Subir ao andar ${nomeDoAndar(e.indice + 1)}`, () => { iniciarFase(e.indice + 1); entrar(); }], repetir, menu],
     });
   }
@@ -848,9 +848,8 @@
 
   aplicarOpcoes(); // sensibilidade, volume e som salvos; sincroniza Opções e o HUD
   mostrarMapa();
-  // Começa no primeiro andar ainda não vencido.
-  const primeiroPendente = melhores.findIndex((p) => p === null);
-  iniciarFase(primeiroPendente >= 0 ? primeiroPendente : 0);
+  // O elevador sempre abre no andar mais fundo (−4), o primeiro da subida.
+  iniciarFase(0);
   Menus.inicio(true);
   requestAnimationFrame(quadro);
 })();
