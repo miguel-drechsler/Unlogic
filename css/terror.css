@@ -351,6 +351,28 @@ body[data-modo="menu"] #hud, body[data-modo="menu"] #perigo { opacity: 0; }
 .ajuda ul { margin: 0; padding-left: 18px; font-size: 15px; line-height: 1.5; }
 .ajuda li + li { margin-top: 4px; }
 
+/* "Neste andar": a placa do andar escolhido, presa na parede antes das regras gerais. */
+.neste-andar {
+  margin: 0 0 26px;
+  padding: 16px 18px;
+  background: rgba(232, 163, 61, 0.06);
+  border-left: 3px solid var(--sodio);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.neste-andar p { margin: 0 0 10px; }
+.na-titulo { margin: 0 0 2px; font-size: 15px; font-weight: 600; color: var(--sodio); }
+.na-titulo span { margin-left: 6px; color: var(--esmalte); }
+.na-conceito { color: var(--aco-claro); }
+.na-manual { padding-left: 10px; border-left: 2px solid rgba(217, 210, 193, 0.3); font-style: italic; }
+.na-ficha { display: grid; gap: 10px; margin: 14px 0 0; }
+.na-ficha dt { font-size: 13px; color: var(--aco-claro); }
+.na-ficha dd { margin: 2px 0 0; }
+.na-ficha ul { margin: 0; padding-left: 18px; }
+.na-ficha li + li { margin-top: 4px; }
+.na-conectivo { display: inline-block; margin: 0 14px 2px 0; white-space: nowrap; }
+.na-conectivo b { font-family: var(--mono); font-size: 1.2em; color: var(--sodio); }
+
 .teclado { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 0 0 22px; font-size: 15px; align-items: center; }
 .teclado dt { white-space: nowrap; }
 .teclado dd { margin: 0; color: var(--aco-claro); }

@@ -37,6 +37,7 @@
   <script src="../js/logica.js"></script>
   <script src="../js/fases.js"></script>
   <script src="../js/estado.js"></script>
+  <script src="../js/manual.js"></script>
   <script>
   (() => {
     const linhas = [];
@@ -187,6 +188,45 @@
       while (Estado.situacao(e) === "jogando" && seguranca++ < 30) Estado.virar(e, nome);
       teste("desperdiçar energia provoca apagão", Estado.situacao(e) === "apagao");
       teste("no apagão não se vira mais alavanca", !Estado.virar(e, nome).ok);
+    }
+
+    // ---------- 8. Manual "Neste andar" (sem entregar a solução) ----------
+    FASES.forEach((fase, i) => {
+      const r = Manual.resumo(fase, i);
+      const andar = `andar ${nomeDoAndar(i)}`;
+      // O que o manual GERA (o texto da fase e o manual escrito à mão vêm prontos).
+      const gerado = [...r.mecanicas, r.energia.frase, ...r.conectivos.map((c) => c.nome)].join(" ");
+      const tudo = [r.texto, r.manual || "", gerado].join(" ");
+
+      // Conectivos conferidos direto no texto das fórmulas, sem passar pelo parser.
+      const fonte = fase.portas.join(" ");
+      const esperado = [["¬", /!/], ["∧", /&|\^/], ["∨", /\|/], ["→", /(^|[^<])->/], ["↔", /<->/]]
+        .filter(([, re]) => re.test(fonte)).map(([s]) => s).join("");
+      teste(`${andar}: manual lista os conectivos das portas`,
+        r.conectivos.map((c) => c.simbolo).join("") === esperado,
+        `obtido ${r.conectivos.map((c) => c.simbolo).join("")}, esperado ${esperado}`);
+
+      teste(`${andar}: manual não dá valores de alavanca`, !/\b[A-Z]\s*=\s*[VF]\b/.test(tudo));
+      teste(`${andar}: manual não aponta portas pelo número`, !/portas?\s+\d/i.test(tudo));
+      const livres = Object.keys(fase.alavancas).filter((n) => !fase.presas.includes(n));
+      teste(`${andar}: o texto gerado não cita alavancas livres`,
+        livres.every((n) => !new RegExp(`\\b${n}\\b`).test(gerado)), gerado);
+      teste(`${andar}: o texto gerado não conta as portas especiais`,
+        !/\b(\d+|duas|três|quatro)\s+portas?\b/i.test(gerado), gerado);
+
+      const tipos = fase.portas.map((t) => Logica.classificar(arvore(t)));
+      teste(`${andar}: mecânicas especiais batem com as portas`,
+        r.mecanicas.some((m) => /nunca abre/.test(m)) === tipos.includes("contradicao") &&
+        r.mecanicas.some((m) => /tautologia/.test(m)) === tipos.includes("tautologia") &&
+        r.mecanicas.some((m) => /presas/.test(m)) === fase.presas.length > 0);
+      teste(`${andar}: campo opcional "manual" aparece só quando existe`,
+        r.manual === (fase.manual ? fase.manual.trim() : null));
+    });
+    {
+      // Energia exata (folga 0) tem que avisar que não há margem.
+      const k = FASES.findIndex((f, i) => Manual.resumo(f, i).energia.folga === 0);
+      teste("manual: andar sem folga avisa que cada virada precisa estar certa",
+        k >= 0 && /não sobra/.test(Manual.resumo(FASES[k], k).energia.frase));
     }
 
     // ---------- Resultado ----------

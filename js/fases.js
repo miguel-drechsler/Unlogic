@@ -6,6 +6,8 @@
  *   presas    : alavancas que o jogador NÃO pode mexer (funcionam como premissas)
  *   portas    : fechaduras lógicas (fórmulas escritas como texto)
  *   energia   : quantas vezes o jogador pode virar uma alavanca
+ *   manual    : (opcional) texto escrito à mão para o bloco "Neste andar" do manual.
+ *               O resto do bloco é gerado sozinho (manual.js). Nunca escreva a solução aqui.
  *
  * Rode  node testes/verificador_fases.js  para conferir se todas as fases têm solução
  * com a energia disponível, e  node testes/verificar_regras.js  para simular a partida.
@@ -26,6 +28,9 @@ const FASES = [
       "P ∧ Q só é verdadeira se as duas partes forem; P ∨ Q basta uma; ¬P inverte o valor. " +
       "Cuidado com a negação de um parêntese: ¬(P ∧ Q) só é falsa quando as DUAS são verdadeiras. " +
       "Abra as quatro portas ao mesmo tempo.",
+    manual:
+      "Primeiro andar: explore antes de mexer. Cada alavanca e cada porta que você vê de perto " +
+      "vai para o tablet (TAB), com a fórmula já preenchida pelos valores que você conhece.",
     // Solução única: A=V B=F C=V D=F
     alavancas: { A: false, B: true, C: false, D: false },
     presas: [],
