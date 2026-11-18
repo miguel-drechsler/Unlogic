@@ -120,9 +120,9 @@
 
     // ---------- 5. Fases e regras ----------
     teste("há fases cadastradas", FASES.length >= 5);
-    // A primeira fase jogada é o andar mais fundo; a última é o −1, a saída.
-    teste("andares: a fase 0 é o fundo e a última é o −1",
-      nomeDoAndar(0) === `−${FASES.length}` && nomeDoAndar(FASES.length - 1) === "−1",
+    // A primeira fase jogada é o andar mais fundo; a última é o T, a saída.
+    teste("andares: a fase 0 é o fundo (−4) e a última é o T",
+      nomeDoAndar(0) === `−${FASES.length - 1}` && nomeDoAndar(FASES.length - 1) === "T",
       FASES.map((_, i) => nomeDoAndar(i)).join(" "));
     FASES.forEach((fase, i) => {
       const e = Estado.criar(fase, i);
@@ -225,10 +225,12 @@
         r.manual === (fase.manual ? fase.manual.trim() : null));
     });
     {
-      // Energia exata (folga 0) tem que avisar que não há margem.
-      const k = FASES.findIndex((f, i) => Manual.resumo(f, i).energia.folga === 0);
+      // Energia exata (folga 0) tem que avisar que não há margem. Nenhum andar atual
+      // tem folga 0, então o teste monta uma cópia do −4 com a energia no mínimo.
+      const minimo = Estado.distanciaDaSolucao(Estado.criar(FASES[0], 0));
+      const justa = { ...FASES[0], energia: minimo };
       teste("manual: andar sem folga avisa que cada virada precisa estar certa",
-        k >= 0 && /não sobra/.test(Manual.resumo(FASES[k], k).energia.frase));
+        /não sobra/.test(Manual.resumo(justa, 0).energia.frase));
     }
 
     // ---------- 9. Dificuldade da criatura por andar ----------

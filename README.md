@@ -9,7 +9,7 @@ A versão 2D original continua disponível em `classico.html` (link “Versão 2
 de lá, o botão **← Voltar ao modo 3D**, no topo, traz de volta.
 
 ## A ideia
-Você acorda no subsolo mais fundo de um laboratório escuro, o andar −5, e precisa subir até o −1,
+Você acorda no subsolo mais fundo de um laboratório escuro, o andar −4, e precisa subir até o T,
 onde fica a saída. Em cada andar:
 
 - cada **alavanca** na parede é uma variável proposicional (cabo para cima = V, para baixo = F);
@@ -38,7 +38,7 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 | Roda do mouse ou PgDn / PgUp (tablet aberto) | rolar o tablet |
 | P ou Esc | pausar (P também continua) — em tela cheia, pausa **sem sair dela** |
 
-**Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓; o −1 fica no alto) e suba com Enter.
+**Tela de início:** escolha o andar no painel do elevador (clique ou ↑/↓; o T fica no alto) e suba com Enter.
 "Como jogar" e "Opções" ficam logo abaixo.
 **Pausa:** continuar, ver o manual do andar, reiniciar o andar, opções, controles ou sair para o menu.
 Reiniciar e sair pedem um segundo clique de confirmação, porque perdem o progresso do andar.
@@ -106,25 +106,28 @@ site zera os recordes.
 | Energia limitada → apagão | Obriga a raciocinar antes de mexer: quando a energia não alcança mais nenhuma solução, as luzes apagam e a criatura corre até você |
 | Virada em falso acelera a criatura | Tentativa e erro é punida (em falso = não aproxima de nenhuma solução) |
 | Terminal "Impossível!" | Identificar **contradições** (errar custa 1 de energia) |
-| Porta sempre aberta (andar −2) | **Tautologia** (silogismo hipotético) |
-| Porta-isca (andar −2) | Parece impossível, mas abre em exatamente uma linha da tabela-verdade |
+| Porta sempre aberta (andar −1) | **Tautologia** (silogismo hipotético) |
+| Porta-isca (andar −1) | Parece impossível, mas abre em exatamente uma linha da tabela-verdade |
 | Tabela-verdade no tablet | Ferramenta estratégica (custa pontos) |
-| Alavancas com grade (andar −1) | Premissas, **modus ponens**, **modus tollens** e silogismo disjuntivo |
+| Alavancas com grade (andar T) | Premissas, **modus ponens**, **modus tollens** e silogismo disjuntivo |
 | Tablet só mostra o que foi encontrado | Valoração parcial: fórmulas aparecem com `?` até você achar as alavancas |
 
 ### Os andares
-A ordem é a de jogo: começa no −5, o mais fundo, e termina no −1, a saída.
+A ordem é a de jogo: começa no −4, o mais fundo, e termina no T, a saída.
 
 | Andar | Conceito | Alavancas | Portas | Viradas mínimas / energia |
 |---|---|---|---|---|
-| −5 | ∧, ∨, ¬ com parênteses negados | 4 | 4 | 3 / 5 |
-| −4 | Condicional: o caminho curto usa antecedentes falsos | 5 | 5 | 3 / 5 |
-| −3 | Bicondicional: começa com 4 de 5 portas abertas, e mesmo assim faltam 4 viradas | 5 | 5 | 4 / 5 |
-| −2 | 2 contradições a selar, 1 tautologia e 1 porta-isca | 4 | 6 | 3 / 4 |
-| −1 | 2 premissas presas, dedução em cadeia e 1 contradição a selar | 6 | 7 | 4 / 4 |
+| −4 | ∧, ∨, ¬ com parênteses negados | 4 | 4 | 3 / 7 |
+| −3 | Condicional: o caminho curto usa antecedentes falsos | 5 | 5 | 3 / 7 |
+| −2 | Bicondicional: começa com 4 de 5 portas abertas, e mesmo assim faltam 4 viradas | 5 | 5 | 4 / 6 |
+| −1 | 2 contradições a selar, 1 tautologia e 1 porta-isca | 4 | 6 | 3 / 5 |
+| T | 2 premissas presas (6 alavancas, 4 livres), dedução em cadeia e 1 contradição a selar | 6 | 7 | 4 / 5 |
 
-Uma virada errada custa 2 de energia (ida e volta): os andares −5 e −4 perdoam um erro,
-os −3 e −2 só perdoam uma acusação errada no terminal, e o −1 não perdoa nada.
+A energia conta **viradas**, não alavancas nem portas: as alavancas já começam em alguma
+posição, e só as erradas precisam ser viradas. A ficha do elevador mostra a energia ao
+lado do mínimo de viradas. Uma virada errada custa 2 de energia (ida e volta) e uma
+acusação errada no terminal custa 1: os andares −4 e −3 perdoam dois erros, os −2 e −1
+perdoam um, e o T só perdoa uma acusação errada no terminal.
 
 Por dentro, cada andar continua sendo a fase de mesmo índice em `js/fases.js` (0 = a primeira
 jogada). Só a exibição mudou: `nomeDoAndar(i)` converte o índice `i` no andar `−(total − i)`.
@@ -142,13 +145,13 @@ Por isso os recordes salvos e o mapa de cada andar continuam valendo.
 
   | Andar | Nível | Trégua inicial | Patrulha / caça / teto (m/s) | Caça a partir de | Caçada / descanso | Ronda perto de você |
   |---|---|---|---|---|---|---|
-  | −5 | lenta | 8 s | 1,6 / 2,6 / 5,0 | 4 tiles | 9 s / 13 s | 20% |
-  | −4 | lenta | 7 s | 1,8 / 2,8 / 5,3 | 5 tiles | 10,5 s / 11,5 s | 28% |
-  | −3 | atenta | 6 s | 2,0 / 3,1 / 5,5 | 6 tiles | 12 s / 10 s | 35% |
-  | −2 | atenta | 5 s | 2,1 / 3,3 / 5,8 | 6 tiles | 13,5 s / 8,5 s | 42% |
-  | −1 | implacável | 4 s | 2,3 / 3,5 / 6,0 | 7 tiles | 15 s / 7 s | 50% |
+  | −4 | lenta | 8 s | 1,6 / 2,6 / 5,0 | 4 tiles | 9 s / 13 s | 20% |
+  | −3 | lenta | 7 s | 1,8 / 2,8 / 5,3 | 5 tiles | 10,5 s / 11,5 s | 28% |
+  | −2 | atenta | 6 s | 2,0 / 3,1 / 5,5 | 6 tiles | 12 s / 10 s | 35% |
+  | −1 | atenta | 5 s | 2,1 / 3,3 / 5,8 | 6 tiles | 13,5 s / 8,5 s | 42% |
+  | T | implacável | 4 s | 2,3 / 3,5 / 6,0 | 7 tiles | 15 s / 7 s | 50% |
 
-  O −3 equivale à criatura antiga, de valores fixos. Dois limites nunca mudam, porque mantêm
+  O −2 equivale à criatura antiga, de valores fixos. Dois limites nunca mudam, porque mantêm
   todo andar vencível: sem erros, ela caça mais devagar que o seu passo (4,0 m/s); com erros,
   o teto fica abaixo da sua corrida (6,4 m/s). A trégua (parada inicial, fim da caçada e
   descanso) existe em todos os andares. O modo estudo continua desligando a criatura.
@@ -266,10 +269,10 @@ correções de consistência com o jogo 3D:
 - Correção do apagão: ele também dispara quando ainda há energia, mas não há mais
   solução possível. A mesma regra foi levada à versão 2D.
 - Selar uma contradição no terminal é gratuito e pode ser a última jogada mesmo com
-  energia zero (necessário para o caminho ótimo do andar −1).
+  energia zero.
 - Suíte de testes no navegador, sem depender de Node.js.
 - Versão 2D com link de volta ao modo 3D (issue #5).
-- O jogo começa no −5 e sobe até o −1, que é a saída. O painel do elevador mantém o −1
+- O jogo começa no −4 e sobe até o T, que é a saída. O painel do elevador mantém o T
   no alto; as setas ↑/↓ andam no sentido do painel (issue #4).
 - Manual "Neste andar", diferente para cada andar, no "Como jogar" e na pausa (issue #6).
 - A criatura fica mais perigosa a cada andar (lenta → atenta → implacável), sem passar dos

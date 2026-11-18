@@ -307,7 +307,7 @@ body[data-modo="menu"] #hud, body[data-modo="menu"] #perigo { opacity: 0; }
 }
 .andar-conceito { margin: 6px 0 22px; font-size: 17px; color: var(--aco-claro); }
 .ficha {
-  display: flex;      /* cinco itens: quebra a linha sozinha quando não cabem */
+  display: flex;      /* seis itens: quebra a linha sozinha quando não cabem */
   flex-wrap: wrap;
   gap: 10px 30px;
   margin: 0 0 30px;
@@ -316,6 +316,7 @@ body[data-modo="menu"] #hud, body[data-modo="menu"] #perigo { opacity: 0; }
 }
 .ficha dt { font-size: 13px; color: var(--aco-claro); }
 .ficha dd { margin: 2px 0 0; font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ficha dd small { font-size: 13px; font-weight: 400; color: var(--aco-claro); } /* "viradas", "(2 presas)" */
 
 .acao-principal {
   padding: 15px 30px;

@@ -14,7 +14,7 @@
  *   - depois de desistir, fica `descanso` segundos sem caçar e vai patrulhar longe.
  *
  * Dificuldade por andar: Monstro.dificuldade(indice, total) interpola CURVA do primeiro
- * andar jogado (−5, "lenta") ao último (−1, "implacável"). O andar do meio fica perto da
+ * andar jogado (−4, "lenta") ao último (T, "implacável"). O andar do meio fica perto da
  * criatura antiga, de constantes fixas. Dois limites nunca mudam, porque mantêm o andar
  * vencível: caçando sem erros ela é mais lenta que o PASSO do jogador, e mesmo no teto
  * (com muitos erros) é mais lenta que a CORRIDA dele. O modo estudo continua desligando-a

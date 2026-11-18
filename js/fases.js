@@ -1,5 +1,5 @@
 /*
- * fases.js — Os 5 andares do jogo, na ordem em que são jogados: do −5 (o fundo) ao −1 (a saída)
+ * fases.js — Os 5 andares do jogo, na ordem em que são jogados: do −4 (o fundo) ao T (a saída)
  *
  * Para criar uma fase nova, basta adicionar um objeto nesta lista:
  *   alavancas : valor inicial de cada alavanca (true = V, false = F)
@@ -13,10 +13,11 @@
  * com a energia disponível, e  node testes/verificar_regras.js  para simular a partida.
  *
  * Dificuldade crescente (viradas mínimas / energia), por andar:
- *   −5: 3/5   −4: 3/5   −3: 4/5   −2: 3/4 + 2 portas a selar   −1: 4/4 + 1 porta a selar
- * Uma virada errada custa 2 de energia (ida e volta). Então a folga de 2 dos andares
- * −5 e −4 perdoa um erro; a folga de 1 dos andares −3 e −2 só perdoa uma acusação errada
- * no terminal; o andar −1 não perdoa nada.
+ *   −4: 3/7   −3: 3/7   −2: 4/6   −1: 3/5 + 2 portas a selar   T: 4/5 + 1 porta a selar
+ * Energia conta VIRADAS, não alavancas nem portas. Uma virada errada custa 2 de energia
+ * (ida e volta), uma acusação errada no terminal custa 1. Então a folga de 4 dos andares
+ * −4 e −3 perdoa dois erros; a folga de 2 dos andares −2 e −1 perdoa um; a folga de 1
+ * do andar T só perdoa uma acusação errada no terminal.
  * Evite chamar uma alavanca de V ou F: confunde com os valores.
  */
 const FASES = [
@@ -35,7 +36,7 @@ const FASES = [
     alavancas: { A: false, B: true, C: false, D: false },
     presas: [],
     portas: ["A & !B", "B | C", "!(C & D)", "(A | D) & !(B & C)"],
-    energia: 5,
+    energia: 7,
   },
   {
     titulo: "Se... então",
@@ -49,7 +50,7 @@ const FASES = [
     alavancas: { A: true, B: false, C: false, D: true, E: true },
     presas: [],
     portas: ["A -> B", "B -> (C & !D)", "!C -> E", "E -> (A & D)", "(A -> D) -> C"],
-    energia: 5,
+    energia: 7,
   },
   {
     titulo: "Se, e somente se",
@@ -62,7 +63,7 @@ const FASES = [
     alavancas: { A: true, B: false, C: false, D: true, E: true },
     presas: [],
     portas: ["A <-> !B", "(B <-> C) <-> D", "!(C <-> E)", "(A & D) <-> E", "C <-> (A -> E)"],
-    energia: 5,
+    energia: 6,
   },
   {
     titulo: "As portas impossíveis",
@@ -84,7 +85,7 @@ const FASES = [
       "(A <-> B) & (B <-> !C) & (C <-> A)",
       "D -> !A",
     ],
-    energia: 4,
+    energia: 5,
   },
   {
     titulo: "Premissas",
@@ -108,19 +109,21 @@ const FASES = [
       "(B & !C) -> (Q | D)",
       "(P -> Q) & P & !Q",
     ],
-    energia: 4,
+    energia: 5,
   },
 ];
 
 /*
  * Índice da fase -> nome do andar. A ordem de FASES é a ordem em que se joga:
- * a fase 0 é o andar mais fundo e a última é o −1, a saída do laboratório.
- *   nomeDoAndar(0) === "−5"   ...   nomeDoAndar(FASES.length - 1) === "−1"
+ * a fase 0 é o andar mais fundo e a última é o T (térreo), a saída do laboratório.
+ *   nomeDoAndar(0) === "−4"   ...   nomeDoAndar(FASES.length - 1) === "T"
+ * Cuidado: índice e nome do andar NÃO coincidem (índice 0 = andar −4).
  * Recordes e sementes do labirinto continuam indexados pela fase (0, 1, 2...),
  * então mudar só a exibição não exige migrar nada. Use sempre este helper.
  */
 function nomeDoAndar(indice) {
-  return `−${FASES.length - indice}`; // "−" tipográfico (U+2212), não o hífen
+  const abaixo = FASES.length - 1 - indice; // quantos andares abaixo do térreo
+  return abaixo === 0 ? "T" : `−${abaixo}`; // "−" tipográfico (U+2212), não o hífen
 }
 
 if (typeof module !== "undefined") {
