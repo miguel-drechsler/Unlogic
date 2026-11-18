@@ -5,7 +5,8 @@
 2. Dê dois cliques em `index.html`. O jogo abre no navegador (Chrome, Safari, Edge ou Firefox).
 
 Não precisa instalar nada nem ter internet: o Three.js vai junto, na pasta `vendor/`.
-A versão 2D original continua disponível em `classico.html`.
+A versão 2D original continua disponível em `classico.html` (link “Versão 2D clássica” no menu);
+de lá, o botão **← Voltar ao modo 3D**, no topo, traz de volta.
 
 ## A ideia
 Você está preso no subsolo de um laboratório escuro. Em cada andar:
@@ -188,8 +189,9 @@ node testes/verificar_regras.js      # simula a partida com as regras do jogo
 ```
 
 ## Versão clássica 2D
-`classico.html` mantém o puzzle original. Ela ganhou apenas duas correções de
-consistência com o jogo 3D:
+`classico.html` mantém o puzzle original. Ela ganhou um link **← Voltar ao modo 3D** no topo
+(alcançável com `Tab`; em tela estreita ele divide a primeira linha com o título) e duas
+correções de consistência com o jogo 3D:
 - a fase termina assim que a energia restante **não alcança mais nenhuma solução**,
   em vez de deixar o jogador virando alavancas sem saída (a mensagem explica se
   ainda faltavam viradas ou se nenhuma valoração abre todas as portas);
@@ -216,6 +218,7 @@ consistência com o jogo 3D:
 - Selar uma contradição no terminal é gratuito e pode ser a última jogada mesmo com
   energia zero (necessário para o caminho ótimo do andar −5).
 - Suíte de testes no navegador, sem depender de Node.js.
+- Versão 2D com link de volta ao modo 3D (issue #5).
 
 Nada disso muda o núcleo: as fases continuam sendo resolvidas avaliando fórmulas
 proposicionais sobre as mesmas alavancas compartilhadas.
