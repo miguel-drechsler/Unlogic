@@ -1,5 +1,7 @@
 # Unlogic — um jogo de terror em primeira pessoa sobre Lógica Proposicional
 
+Link: https://miguel-drechsler.github.io/Unlogic/
+
 ## Como rodar o jogo
 1. Descompacte o zip.
 2. Dê dois cliques em `index.html`. O jogo abre no navegador (Chrome, Safari, Edge ou Firefox).
