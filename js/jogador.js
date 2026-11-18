@@ -111,5 +111,8 @@ const Jogador = (() => {
     };
   }
 
-  return { criar, ALTURA_OLHOS };
+  // ANDAR e CORRER saem daqui para monstro.js (limites da criatura) e para os testes.
+  return { criar, ALTURA_OLHOS, ANDAR, CORRER };
 })();
+
+if (typeof module !== "undefined") module.exports = Jogador;

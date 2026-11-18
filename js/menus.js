@@ -88,6 +88,7 @@ const Menus = (() => {
         <div><dt>Conectivos nas portas</dt><dd>${conectivos}</dd></div>
         <div><dt>Mecânicas especiais</dt><dd>${mecanicas}</dd></div>
         <div><dt>Energia: ${r.energia.total}</dt><dd>${esc(r.energia.frase)}</dd></div>
+        <div><dt>Criatura: ${esc(r.criatura.nivel)}</dt><dd>${esc(r.criatura.frase)}</dd></div>
       </dl>`;
   }
 
@@ -194,6 +195,7 @@ const Menus = (() => {
       ["Alavancas", Object.keys(f.alavancas).length],
       ["Portas", f.portas.length],
       ["Energia", f.energia],
+      ["Criatura", Monstro.dificuldade(indice, FASES.length).nivel],
       ["Recorde", melhores[indice] !== null ? `${melhores[indice]} pts` : "nenhum"],
     ];
     $("andarFicha").innerHTML = ficha.map(([nome, valor]) => `<div><dt>${nome}</dt><dd>${valor}</dd></div>`).join("");
