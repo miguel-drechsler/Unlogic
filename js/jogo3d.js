@@ -504,7 +504,7 @@
       : "";
 
     Hud.telaFim(true, {
-      titulo: `Andar −${e.indice + 1} vencido`,
+      titulo: `Andar ${nomeDoAndar(e.indice)} vencido`,
       corpo: `
         <p>Valoração final: ${valoracao} · tempo ${Math.round(e.tempo)} s</p>
         ${notaEstudo}
@@ -517,8 +517,8 @@
           <tr class="soma"><td>Pontos do andar</td><td>${pts}</td></tr>
         </table>`,
       botoes: ultima
-        ? [["Ver resultado final", mostrarFinal], repetir, menu]
-        : [[`Descer ao andar −${e.indice + 2}`, () => { iniciarFase(e.indice + 1); entrar(); }], repetir, menu],
+        ? [["Sair do laboratório", mostrarFinal], repetir, menu] // o −1 é a saída
+        : [[`Subir ao andar ${nomeDoAndar(e.indice + 1)}`, () => { iniciarFase(e.indice + 1); entrar(); }], repetir, menu],
     });
   }
 
@@ -533,7 +533,7 @@
         <p>Pontuação máxima = resolver cada andar com o mínimo de viradas, sem tabelas e sem
         acusações erradas: só raciocínio lógico.</p>`,
       botoes: [
-        ["Recomeçar do andar −1", () => { melhores.fill(null); salvarProgresso(); iniciarFase(0); entrar(); }],
+        [`Recomeçar do andar ${nomeDoAndar(0)}`, () => { melhores.fill(null); salvarProgresso(); iniciarFase(0); entrar(); }],
         ["Menu principal", voltarAoMenu],
       ],
     });

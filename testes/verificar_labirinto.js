@@ -18,7 +18,7 @@ const falha = (msg) => { console.log("  ERRO: " + msg); tudoCerto = false; };
 FASES.forEach((fase, i) => {
   const nomes = Object.keys(fase.alavancas);
   const lab = Labirinto.paraFase(fase, i);
-  console.log(`\n=== Fase ${i + 1}: ${fase.titulo} (${lab.L}×${lab.L} tiles) ===`);
+  console.log(`\n=== Fase ${i + 1} · andar ${FASES.nomeDoAndar(i)}: ${fase.titulo} (${lab.L}×${lab.L} tiles) ===`);
   console.log(Labirinto.paraTexto(lab));
 
   if (lab.portas.length !== fase.portas.length) falha("faltam portas no mapa");

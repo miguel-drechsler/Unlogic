@@ -69,11 +69,13 @@ const Menus = (() => {
   }
 
   // O painel do elevador: −1 no alto, o andar mais fundo embaixo, como num elevador de verdade.
+  // A fase 0 (a primeira jogada) é o fundo, então os botões saem na ordem inversa de FASES.
+  // --i é a posição na tela (de cima para baixo), usada na animação que liga os botões.
   function montarElevador() {
-    $("botoesAndar").innerHTML = FASES.map((f, i) => `
+    $("botoesAndar").innerHTML = FASES.map((f, i) => i).reverse().map((i, posicao) => `
       <div class="linha-andar">
-        <button class="botao-andar" data-andar="${i}" style="--i:${i}" aria-pressed="false"
-          aria-label="Andar −${i + 1}: ${f.titulo}">−${i + 1}</button>
+        <button class="botao-andar" data-andar="${i}" style="--i:${posicao}" aria-pressed="false"
+          aria-label="Andar ${nomeDoAndar(i)}: ${FASES[i].titulo}">${nomeDoAndar(i)}</button>
         <span class="placa-andar" data-placa="${i}"></span>
       </div>`).join("");
   }
@@ -112,7 +114,7 @@ const Menus = (() => {
     switch (el.dataset.acao) {
       case "jogar": return cb.jogar();
       case "continuar": return cb.continuar();
-      case "reiniciar": return confirmar(el, `Confirmar: reiniciar o andar −${selecionado + 1}`, cb.reiniciar);
+      case "reiniciar": return confirmar(el, `Confirmar: reiniciar o andar ${nomeDoAndar(selecionado)}`, cb.reiniciar);
       case "menu": return confirmar(el, "Confirmar: sair e perder este andar", cb.sairParaMenu);
     }
   }
@@ -151,14 +153,14 @@ const Menus = (() => {
   function andares(indice, melhores) {
     selecionado = indice;
     const f = FASES[indice];
-    $("visor").textContent = `−${indice + 1}`;
+    $("visor").textContent = nomeDoAndar(indice);
     document.querySelectorAll("[data-andar]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.andar) === indice)));
     document.querySelectorAll("[data-placa]").forEach((p) => {
       const pts = melhores[Number(p.dataset.placa)];
       p.textContent = pts !== null ? `${pts} pts` : "";
     });
 
-    $("andarNumero").textContent = `Andar −${indice + 1} de −${FASES.length}`;
+    $("andarNumero").textContent = `Andar ${nomeDoAndar(indice)} · etapa ${indice + 1} de ${FASES.length}`;
     $("andarTitulo").textContent = f.titulo;
     $("andarConceito").textContent = f.conceito;
     const ficha = [
@@ -168,13 +170,16 @@ const Menus = (() => {
       ["Recorde", melhores[indice] !== null ? `${melhores[indice]} pts` : "nenhum"],
     ];
     $("andarFicha").innerHTML = ficha.map(([nome, valor]) => `<div><dt>${nome}</dt><dd>${valor}</dd></div>`).join("");
-    $("btnDescer").textContent = `Descer ao andar −${indice + 1}`;
+    // O jogador acorda no fundo: o primeiro andar é "começar", os outros são "subir".
+    $("btnJogar").textContent = indice === 0
+      ? `Começar no andar ${nomeDoAndar(indice)}`
+      : `Subir ao andar ${nomeDoAndar(indice)}`;
 
     const vencidos = melhores.filter((p) => p !== null).length;
     const total = melhores.reduce((s, p) => s + (p || 0), 0);
     $("progresso").textContent = vencidos
       ? `${vencidos} de ${FASES.length} andares vencidos, ${total} pontos`
-      : `${FASES.length} andares abaixo de você`;
+      : `${FASES.length} andares entre você e a saída`;
   }
 
   function inicio(mostrar) {
@@ -192,7 +197,7 @@ const Menus = (() => {
     $("telaPausa").hidden = !mostrar;
     if (!mostrar) return desfazerConfirmacao();
     selecionado = e.indice;
-    $("pausaAndar").textContent = `Andar −${e.indice + 1}: ${e.fase.titulo}`;
+    $("pausaAndar").textContent = `Andar ${nomeDoAndar(e.indice)}: ${e.fase.titulo}`;
     $("pausaMotivo").hidden = !motivo;
     $("pausaMotivo").textContent = motivo || "";
 
@@ -222,7 +227,8 @@ const Menus = (() => {
     }
     if (modo === "menu" && (ev.code === "ArrowUp" || ev.code === "ArrowDown")) {
       ev.preventDefault();
-      const i = Math.max(0, Math.min(FASES.length - 1, selecionado + (ev.code === "ArrowDown" ? 1 : -1)));
+      // ↑ sobe no painel (rumo ao −1, a última fase); ↓ desce (rumo ao fundo, a fase 0).
+      const i = Math.max(0, Math.min(FASES.length - 1, selecionado + (ev.code === "ArrowUp" ? 1 : -1)));
       if (i !== selecionado) cb.escolherAndar(i);
       return true;
     }
