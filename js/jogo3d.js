@@ -77,6 +77,9 @@
   let trocaPendente = null;    // andar escolhido no elevador, ainda não construído
   let alvo = null;             // o que a mira está apontando
   let tabletAberto = false, visao = { tipo: "geral" };
+  // A conexão com o terminal é independente da visão do tablet: consultar a ajuda (H),
+  // voltar à geral (0) ou abrir uma tabela não desconecta o jogador do aparelho.
+  let terminalConectado = false;
   let apagao = false, saidaLiberada = false;
   let relogio = 0, tempoSusto = 0;
   let visto, ultimoTile = -1; // névoa de exploração do minimapa
@@ -212,6 +215,7 @@
     alvo = null;
     tabletAberto = false;
     visao = { tipo: "geral" };
+    terminalConectado = false;
     monstro.grupo.visible = !modoEstudo;
     Hud.limparAvisos(); // avisos do andar anterior não valem mais
     Hud.barra(e, modoEstudo);
@@ -276,6 +280,7 @@
     if (alvo.tipo === "terminal") {
       tabletAberto = true;
       visao = { tipo: "terminal" };
+      terminalConectado = true;
       return Hud.tablet(e, true, visao);
     }
     const nome = alvo.nome;
@@ -407,9 +412,14 @@
     descobrir(tx, tz);
     mirar();
 
-    if (tabletAberto && visao.tipo === "terminal") { // afastou-se do terminal: desconecta
+    if (terminalConectado && tabletAberto) { // afastou-se do terminal: desconecta, qualquer que seja a visão do tablet
       const t = lab.terminal;
-      if (Math.hypot(centro(t.x) - pos.x, centro(t.z) - pos.z) > 4.5) { visao = { tipo: "geral" }; tabletAberto = false; Hud.tablet(e, false, visao); }
+      if (Math.hypot(centro(t.x) - pos.x, centro(t.z) - pos.z) > 4.5) {
+        terminalConectado = false;
+        visao = { tipo: "geral" };
+        tabletAberto = false;
+        Hud.tablet(e, false, visao);
+      }
     }
 
     // Vitória: atravessar a porta do elevador.
@@ -769,6 +779,7 @@
       pedirPausa();
     } else if (ev.code === "Tab") {
       tabletAberto = !tabletAberto;
+      if (!tabletAberto) terminalConectado = false; // fechar o tablet encerra a conexão com o terminal
       visao = { tipo: "geral" };
       Hud.tablet(e, tabletAberto, visao);
     } else if (ev.code === "KeyH") {
