@@ -581,8 +581,11 @@
   function olharPorArrasto(dx, dy) {
     const euler = new THREE.Euler(0, 0, 0, "YXZ");
     euler.setFromQuaternion(camera.quaternion);
-    euler.y -= dx * 0.0025;
-    euler.x -= dy * 0.0025;
+    // A mesma preferência que ajusta `pointerSpeed` no Pointer Lock precisa valer
+    // no fallback de arrastar: sem isso o slider não faz nada nesse modo.
+    const passo = 0.0025 * opcoes.sensibilidade;
+    euler.y -= dx * passo;
+    euler.x -= dy * passo;
     const limite = Math.PI / 2 - 0.02;
     euler.x = Math.max(-limite, Math.min(limite, euler.x));
     camera.quaternion.setFromEuler(euler);
