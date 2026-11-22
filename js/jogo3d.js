@@ -216,6 +216,9 @@
     tabletAberto = false;
     visao = { tipo: "geral" };
     terminalConectado = false;
+    // Toda troca de andar começa com a confirmação do R limpa, mesmo quando ela vem
+    // do menu, do elevador ou da morte — não só do atalho de teclado.
+    pedidoReinicio = -Infinity;
     monstro.grupo.visible = !modoEstudo;
     Hud.limparAvisos(); // avisos do andar anterior não valem mais
     Hud.barra(e, modoEstudo);
@@ -800,8 +803,7 @@
         pedidoReinicio = agora;
         return void Hud.aviso("Aperte R de novo para reiniciar o andar (as alavancas e a energia voltam ao início).", "ruim");
       }
-      pedidoReinicio = -Infinity;
-      iniciarFase(e.indice, true);
+      iniciarFase(e.indice, true); // também limpa o pedido de confirmação pendente
       Hud.aviso("Andar reiniciado. O que você já tinha encontrado continua no tablet.", "");
     } else if (ev.code === "KeyK") {
       mudo = Som.alternarMudo();
