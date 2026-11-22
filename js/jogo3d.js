@@ -808,9 +808,14 @@
     // Com arrasto para olhar, quem decide se foi clique ou arrasto é o pointerup.
     if (!semTrava && modo === "jogando" && ev.button === 0 && (controles.isLocked || DEMO)) interagir();
   });
-  // Com o mouse travado não há barra de rolagem: a roda rola o tablet.
+  // A roda rola o tablet tanto com o mouse travado (sem cursor sobre ele) quanto no
+  // modo de arrastar para olhar. Nesse modo o navegador já rola o tablet naturalmente
+  // quando o cursor está sobre ele; só rolamos por código quando ele está fora.
   document.addEventListener("wheel", (ev) => {
-    if (modo === "jogando" && tabletAberto && controles.isLocked) $("tabletCorpo").scrollTop += ev.deltaY;
+    if (modo !== "jogando" || !tabletAberto) return;
+    const corpo = $("tabletCorpo");
+    if (corpo.contains(ev.target)) return;
+    corpo.scrollTop += ev.deltaY;
   }, { passive: true });
 
   // ---------- Resolução dinâmica ----------
