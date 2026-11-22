@@ -73,7 +73,7 @@ const Minimapa = (() => {
     return camada.canvas;
   }
 
-  // d = { lab, visto, mundo, e, jogador:{x,z}, frente:{x,z}, monstro:{x,z}|null, tempo,
+  // d = { lab, visto, mundo, e, jogador:{x,z}, frente:{x,z}, monstros:[{x,z}]|null, tempo,
   //       modo: "local" | "completo" }
   function desenhar(canvas, d) {
     const { lab, visto, mundo, e } = d;
@@ -161,17 +161,19 @@ const Minimapa = (() => {
       });
     }
 
-    // ---- Criatura: anel pulsando, só dentro do alcance do sensor (null no modo estudo).
-    if (d.monstro && Math.hypot(d.monstro.x - d.jogador.x, d.monstro.z - d.jogador.z) < ALCANCE_SENSOR) {
-      const pulso = Math.abs(Math.sin(d.tempo * 6));
-      g.strokeStyle = COR.fechada;
-      g.fillStyle = COR.fechada;
-      g.lineWidth = Math.max(2, s * 0.12);
+    // ---- Criaturas: anel pulsando, só dentro do alcance do sensor (null no modo estudo).
+    const criaturas = d.monstros || (d.monstro ? [d.monstro] : []);
+    const pulso = Math.abs(Math.sin(d.tempo * 6));
+    g.strokeStyle = COR.fechada;
+    g.fillStyle = COR.fechada;
+    g.lineWidth = Math.max(2, s * 0.12);
+    for (const criatura of criaturas) {
+      if (!criatura || Math.hypot(criatura.x - d.jogador.x, criatura.z - d.jogador.z) >= ALCANCE_SENSOR) continue;
       g.globalAlpha = 0.5 + 0.5 * pulso;
-      g.beginPath(); g.arc((d.monstro.x / T) * s, (d.monstro.z / T) * s, s * (0.3 + 0.25 * pulso), 0, Math.PI * 2); g.stroke();
-      g.beginPath(); g.arc((d.monstro.x / T) * s, (d.monstro.z / T) * s, s * 0.14, 0, Math.PI * 2); g.fill();
-      g.globalAlpha = 1;
+      g.beginPath(); g.arc((criatura.x / T) * s, (criatura.z / T) * s, s * (0.3 + 0.25 * pulso), 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.arc((criatura.x / T) * s, (criatura.z / T) * s, s * 0.14, 0, Math.PI * 2); g.fill();
     }
+    g.globalAlpha = 1;
 
     // ---- Jogador por último: cone da lanterna + seta com contorno escuro.
     g.save();

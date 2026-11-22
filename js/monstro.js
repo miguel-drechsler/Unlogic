@@ -19,6 +19,9 @@
  * vencível: caçando sem erros ela é mais lenta que o PASSO do jogador, e mesmo no teto
  * (com muitos erros) é mais lenta que a CORRIDA dele. O modo estudo continua desligando-a
  * (jogo3d.js nem chama atualizar).
+ * Nos dois últimos andares há 2 e 3 criaturas: Monstro.quantidade define o número e
+ * Monstro.paraGrupo enfraquece cada uma e escalona a trégua para o conjunto continuar
+ * vencível. Cada instância tem sua própria IA (estados, rota e fôlego).
  *
  * O caminho é recalculado a cada 0,3 s com Labirinto.caminho (A* no grid).
  * Portas fechadas são paredes para o monstro; abertas viram atalho para ele também.
@@ -67,6 +70,34 @@ const Monstro = (() => {
     p.tregua = Math.max(TREGUA_MIN, p.tregua);
     p.descanso = Math.max(DESCANSO_MIN, p.descanso); // depois de cansar, sempre há respiro
     p.nivel = NIVEIS.find(([limite]) => t < limite)[1];
+    return p;
+  }
+
+  // Quantas criaturas o andar tem: uma até o antepenúltimo, duas no penúltimo e
+  // três no último. Com qualquer número de fases, só os dois andares finais mudam.
+  function quantidade(indice, total) {
+    if (total <= 1 || indice < total - 2) return 1;
+    return indice === total - 1 ? 3 : 2;
+  }
+
+  // Várias criaturas caçando ao mesmo tempo não podem somar a velocidade de uma só.
+  // Cada uma fica mais fraca conforme o grupo cresce, e a trégua é escalonada pela
+  // ordem para que não acordem todas juntas. Os limites de vencibilidade continuam.
+  function paraGrupo(d, n, ordem = 0) {
+    const p = { ...d };
+    const fator = 1 - 0.12 * (n - 1);
+    p.velPatrulha *= fator;
+    p.velCaca *= fator;
+    p.tetoCaca *= fator;
+    p.folego *= fator;
+    p.rondaPerto *= fator;
+    p.fareja = Math.max(2, Math.round(p.fareja - (n - 1)));
+    p.descanso += 2 * (n - 1);
+    p.tregua += 2.5 * ordem;
+    p.velCaca = Math.min(p.velCaca, J.ANDAR - FOLGA_FUGA);
+    p.tetoCaca = Math.max(p.velCaca, Math.min(p.tetoCaca, J.CORRER - FOLGA_FUGA));
+    p.tregua = Math.max(TREGUA_MIN, p.tregua);
+    p.descanso = Math.max(DESCANSO_MIN, p.descanso);
     return p;
   }
 
@@ -314,7 +345,7 @@ const Monstro = (() => {
     };
   }
 
-  return { criar, dificuldade };
+  return { criar, dificuldade, quantidade, paraGrupo };
 })();
 
 if (typeof module !== "undefined") module.exports = Monstro;

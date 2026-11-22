@@ -18,7 +18,7 @@ onde fica a saída. Em cada andar:
 - cada **porta** tem uma fórmula no painel neon e abre na hora em que a fórmula fica verdadeira;
 - o **elevador** só libera quando todas as portas estão abertas (ou seladas) **ao mesmo tempo** —
   e aí as alavancas travam, para nenhum clique acidental desfazer a solução no caminho até a saída;
-- uma **criatura** patrulha o andar, ouve as alavancas e persegue quem chega perto.
+- uma ou mais **criaturas** patrulham o andar, ouvem as alavancas e perseguem quem chega perto.
 
 Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e cada virada gasta energia.
 
@@ -159,6 +159,10 @@ Por isso os recordes salvos e o mapa de cada andar continuam valendo.
   todo andar vencível: sem erros, ela caça mais devagar que o seu passo (4,0 m/s); com erros,
   o teto fica abaixo da sua corrida (6,4 m/s). A trégua (parada inicial, fim da caçada e
   descanso) existe em todos os andares. O modo estudo continua desligando a criatura.
+- **Quantidade:** até −2 há uma criatura; em −1 há duas e no T, três. Cada uma do grupo é
+  mais fraca que uma caçadora solitária (velocidade, farejo e fôlego menores, descanso maior),
+  e as tréguas começam em momentos diferentes para não acordarem juntas. Os limites da tabela
+  continuam valendo para todas (`Monstro.paraGrupo` em `js/monstro.js`).
 - Portas fechadas a bloqueiam; portas abertas são atalho para ela também. Se uma porta fecha
   no meio da rota (ou com ela no vão), ela recua e procura outro caminho.
 - Os andares não têm becos sem saída: sempre existe uma segunda rota de fuga.
@@ -289,6 +293,7 @@ correções de consistência com o jogo 3D:
 - Manual "Neste andar", diferente para cada andar, no "Como jogar" e na pausa (issue #6).
 - A criatura fica mais perigosa a cada andar (lenta → atenta → implacável), sem passar dos
   limites que mantêm o jogo vencível; um bot confere isso jogando no `?demo` (issue #3).
+  Os dois últimos andares têm duas e três criaturas, cada uma mais fraca que uma solitária.
 - Revisão de jogabilidade: a virada em falso não pune mais rotas válidas (−3); avisos importantes
   não são apagados por avisos informativos; `R` pede confirmação; ser pego mantém as descobertas;
   a luz do tablet atrai a criatura; a pontuação máxima é igual em todos os andares.

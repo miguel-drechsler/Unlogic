@@ -127,7 +127,7 @@ const Labirinto = (() => {
   }
 
   // ---------- Geração ----------
-  function gerar({ celulas, nPortas, nAlavancas, semente }) {
+  function gerar({ celulas, nPortas, nAlavancas, nMonstros = 1, semente }) {
     const rnd = aleatorio(semente);
     const n = celulas | 1; // ímpar: existe uma célula exatamente no centro
     const L = 2 * n + 1;
@@ -263,26 +263,36 @@ const Labirinto = (() => {
     //    início pode estar a 40 tiles de caminho, mas a uma porta de distância.
     const celulasChao = [];
     const longe = (c) => doInicio[idx(c.x, c.z)] + 3 * (Math.abs(c.x - inicio.x) + Math.abs(c.z - inicio.z));
-    let monstro = inicio;
     for (let cz = 0; cz < n; cz++) {
       for (let cx = 0; cx < n; cx++) {
-        const c = { x: 2 * cx + 1, z: 2 * cz + 1 };
-        celulasChao.push(c);
-        if (longe(c) > longe(monstro)) monstro = c;
+        celulasChao.push({ x: 2 * cx + 1, z: 2 * cz + 1 });
       }
     }
+    const monstros = [];
+    const candidatos = celulasChao.slice().sort((a, b) => longe(b) - longe(a));
+    // Com mais de uma criatura, escolhe tocais longe do início E separados entre si.
+    // Relaxa a separação só se o mapa não tiver espaço suficiente.
+    for (const separacao of [8, 4, 1]) {
+      for (const c of candidatos) {
+        if (monstros.length >= nMonstros) break;
+        if (monstros.every((m) => Math.abs(m.x - c.x) + Math.abs(m.z - c.z) >= separacao)) monstros.push(c);
+      }
+      if (monstros.length >= nMonstros) break;
+    }
+    const monstro = monstros[0] || inicio;
     const corredores = celulasChao.filter((c) => salas.every((s) => Math.abs(c.x - s.x) > 1 || Math.abs(c.z - s.z) > 1));
     const lampadas = [inicio, ...salas, ...espalhar(lab, corredores, Math.max(2, 5 - salas.length), inicio)];
 
-    return { L, tiles, celulas: n, inicio, salas, portas, saida, alavancas: escolhidos, terminal, lampadas, monstro, celulasChao };
+    return { L, tiles, celulas: n, inicio, salas, portas, saida, alavancas: escolhidos, terminal, lampadas, monstro, monstros, celulasChao };
   }
 
   // O mapa de uma fase: tamanho pelo andar, conteúdo pela fase, sempre a mesma semente.
-  function paraFase(fase, indice) {
+  function paraFase(fase, indice, nMonstros = 1) {
     return gerar({
       celulas: 7 + 2 * Math.floor(indice / 3), // 7, 7, 7, 9, 9...
       nPortas: fase.portas.length,
       nAlavancas: Object.keys(fase.alavancas).length,
+      nMonstros,
       semente: 4242 + indice * 101,
     });
   }
@@ -292,7 +302,8 @@ const Labirinto = (() => {
     const marca = new Map();
     const p = (t, c) => marca.set(t.z * lab.L + t.x, c);
     lab.alavancas.forEach((a, k) => p(a, String.fromCharCode(97 + k)));
-    p(lab.terminal, "T"); p(lab.inicio, "@"); p(lab.monstro, "M");
+    p(lab.terminal, "T"); p(lab.inicio, "@");
+    (lab.monstros || [lab.monstro]).forEach((m) => p(m, "M"));
     let s = "";
     for (let z = 0; z < lab.L; z++) {
       for (let x = 0; x < lab.L; x++) {

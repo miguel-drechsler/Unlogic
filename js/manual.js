@@ -110,7 +110,9 @@ const Manual = (() => {
 
   function criatura(indice) {
     const { nivel } = M.dificuldade(indice, total());
-    return { nivel, frase: `${CRIATURA[nivel]} No modo estudo ela fica desligada.` };
+    const n = M.quantidade(indice, total());
+    const grupo = n > 1 ? ` Há ${n} criaturas neste andar, cada uma mais fraca que uma caçadora solitária.` : "";
+    return { nivel, frase: `${CRIATURA[nivel]}${grupo} No modo estudo elas ficam desligadas.` };
   }
 
   return { resumo };

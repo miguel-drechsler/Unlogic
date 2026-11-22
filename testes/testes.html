@@ -39,6 +39,7 @@
   <script src="../js/estado.js"></script>
   <script src="../js/jogador.js"></script>   <!-- só as constantes: nada de Three.js aqui -->
   <script src="../js/monstro.js"></script>
+  <script src="../js/labirinto.js"></script>
   <script src="../js/manual.js"></script>
   <script>
   (() => {
@@ -277,6 +278,56 @@
       const fora = Monstro.dificuldade(99, n); // índice além do último: continua dentro dos limites
       teste("criatura: limites valem até fora da curva",
         fora.velCaca < Jogador.ANDAR && fora.tetoCaca < Jogador.CORRER && fora.tregua > 0);
+    }
+
+    // ---------- 10. Quantidade de criaturas e tocais por andar ----------
+    {
+      const n = FASES.length;
+      const q = FASES.map((_, i) => Monstro.quantidade(i, n));
+      teste("criatura: um andar sozinho continua com uma criatura", Monstro.quantidade(0, 1) === 1);
+      teste("criatura: quantidade nunca diminui e termina em 3",
+        q.every((v, i) => i === 0 || v >= q[i - 1]) && q[0] === 1 && q[n - 2] === 2 && q[n - 1] === 3,
+        q.join(","));
+      teste("criatura: só os dois últimos andares têm mais de uma",
+        q.slice(0, n - 2).every((v) => v === 1), q.join(","));
+
+      const ruins = [];
+      for (let i = 0; i < n; i++) {
+        const base = Monstro.dificuldade(i, n);
+        for (let k = 0; k < q[i]; k++) {
+          const d = Monstro.paraGrupo(base, q[i], k);
+          if (d.velCaca >= Jogador.ANDAR || d.tetoCaca >= Jogador.CORRER ||
+              d.tregua <= 0 || d.descanso <= 0 || d.folego <= 0) ruins.push(`${nomeDoAndar(i)} #${k + 1}`);
+        }
+      }
+      teste("criatura: todas as do grupo ficam abaixo do passo/corrida e com trégua",
+        ruins.length === 0, ruins.join(", "));
+      const ultima = Monstro.dificuldade(n - 1, n);
+      teste("criatura: as tréguas do grupo são escalonadas",
+        Monstro.paraGrupo(ultima, 3, 2).tregua > Monstro.paraGrupo(ultima, 3, 1).tregua &&
+        Monstro.paraGrupo(ultima, 3, 1).tregua > Monstro.paraGrupo(ultima, 3, 0).tregua);
+      teste("criatura: quanto mais criaturas, mais fraca cada uma",
+        Monstro.paraGrupo(ultima, 3, 0).velCaca < Monstro.paraGrupo(ultima, 2, 0).velCaca);
+
+      const tocasRuins = [];
+      FASES.forEach((fase, i) => {
+        const lab = Labirinto.paraFase(fase, i, q[i]);
+        if (lab.monstros.length !== q[i]) tocasRuins.push(`${nomeDoAndar(i)}: ${lab.monstros.length} tocas`);
+        if (new Set(lab.monstros.map((t) => t.z * lab.L + t.x)).size !== q[i]) tocasRuins.push(`${nomeDoAndar(i)}: repetida`);
+        lab.monstros.forEach((t) => {
+          if (Math.abs(t.x - lab.inicio.x) + Math.abs(t.z - lab.inicio.z) < 6) tocasRuins.push(`${nomeDoAndar(i)}: perto do início`);
+        });
+        for (let a = 0; a < lab.monstros.length; a++) {
+          for (let b = a + 1; b < lab.monstros.length; b++) {
+            if (Math.abs(lab.monstros[a].x - lab.monstros[b].x) + Math.abs(lab.monstros[a].z - lab.monstros[b].z) < 4)
+              tocasRuins.push(`${nomeDoAndar(i)}: tocas juntas`);
+          }
+        }
+      });
+      teste("labirinto: uma toca por criatura, longe do início e separadas",
+        tocasRuins.length === 0, tocasRuins.join(", "));
+      teste("labirinto: sem quantidade explícita, continua com uma toca",
+        Labirinto.paraFase(FASES[0], 0).monstros.length === 1);
     }
 
     // ---------- Resultado ----------

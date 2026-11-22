@@ -50,7 +50,9 @@
   // ---------- Estado da partida ----------
   const jogador = Jogador.criar(camera, document.body);
   const controles = jogador.controles;
-  const monstro = Monstro.criar(cena);
+  // Uma instância por criatura possível (o último andar tem três). As que não estão
+  // em uso ficam invisíveis e não recebem atualização.
+  const monstros = Array.from({ length: 3 }, () => Monstro.criar(cena));
   const raio = new THREE.Raycaster();
   raio.far = 3; // só interage de perto
   const CENTRO_DA_TELA = new THREE.Vector2(0, 0);
@@ -77,6 +79,7 @@
   let trocaPendente = null;    // andar escolhido no elevador, ainda não construído
   let alvo = null;             // o que a mira está apontando
   let tabletAberto = false, visao = { tipo: "geral" };
+  let quantidadeMonstros = 1;
   // A conexão com o terminal é independente da visão do tablet: consultar a ajuda (H),
   // voltar à geral (0) ou abrir uma tabela não desconecta o jogador do aparelho.
   let terminalConectado = false;
@@ -117,7 +120,7 @@
     const som = $("somEstado");
     som.textContent = mudo ? "SOM MUDO" : "SOM LIGADO";
     som.classList.toggle("mudo", mudo);
-    monstro.grupo.visible = !modoEstudo;
+    monstros.forEach((m, i) => { m.grupo.visible = !modoEstudo && i < quantidadeMonstros; });
   }
 
   // Chamado por menus.js quando o jogador mexe numa opção (e uma vez na largada, sem nome).
@@ -197,7 +200,8 @@
       e.alavancasVistas = new Set(antes.alavancas);
       e.portasVistas = new Set(antes.portas);
     }
-    lab = Labirinto.paraFase(fase, indice);
+    quantidadeMonstros = Monstro.quantidade(indice, FASES.length);
+    lab = Labirinto.paraFase(fase, indice, quantidadeMonstros);
     mundo = Mundo.construir(cena, lab, e);
 
     // Começa olhando para o corredor, não para a parede.
@@ -205,7 +209,14 @@
       .find(([x, z]) => mundo.passavel(lab.inicio.x + x, lab.inicio.z + z));
     guinadaInicial = Math.atan2(-dx, -dz);
     jogador.posicionar(centro(lab.inicio.x), centro(lab.inicio.z), guinadaInicial);
-    monstro.reposicionar(lab.monstro, Monstro.dificuldade(indice, FASES.length)); // cresce a cada andar
+    // Cada criatura tem parâmetros próprios: o grupo cresce, mas nenhuma fica mais
+    // rápida que o jogador, e as tréguas começam em momentos diferentes.
+    const difMonstro = Monstro.dificuldade(indice, FASES.length); // cresce a cada andar
+    monstros.forEach((m, i) => {
+      const ativa = i < quantidadeMonstros;
+      m.grupo.visible = ativa && !modoEstudo;
+      if (ativa) m.reposicionar(lab.monstros[i], Monstro.paraGrupo(difMonstro, quantidadeMonstros, i));
+    });
 
     visto = Minimapa.novaVisao(lab); // visão nova (a camada desenhada do minimapa é por visão)...
     if (antes) visto.set(antes.visto); // ...com os tiles que já tinham sido vistos
@@ -219,7 +230,6 @@
     // Toda troca de andar começa com a confirmação do R limpa, mesmo quando ela vem
     // do menu, do elevador ou da morte — não só do atalho de teclado.
     pedidoReinicio = -Infinity;
-    monstro.grupo.visible = !modoEstudo;
     Hud.limparAvisos(); // avisos do andar anterior não valem mais
     Hud.barra(e, modoEstudo);
     Hud.tablet(e, false, visao);
@@ -297,7 +307,7 @@
     }
     Som.clack();
     const a = mundo.alavancas.find((x) => x.nome === nome);
-    if (!modoEstudo && a) monstro.ouvir(a.sup); // o barulho atrai a criatura
+    if (!modoEstudo && a) monstros.slice(0, quantidadeMonstros).forEach((m) => m.ouvir(a.sup)); // o barulho atrai as criaturas
     Hud.aviso(r.errada
       ? (modoEstudo
         ? `${nome} = ${VF(r.valor)}. Essa virada não aproxima o andar da solução.`
@@ -432,10 +442,10 @@
 
     camera.getWorldDirection(frente); // a seta do minimapa e o "lado" do som usam isso
 
-    let pegou = false;
+    let pegou = false, indicePegou = -1;
     let proximidade = 0;
     if (!modoEstudo) {
-      pegou = monstro.atualizar(dt, {
+      const contexto = {
         lab,
         passavel: mundo.passavel,
         jogador: pos,
@@ -445,14 +455,25 @@
         tablet: tabletAberto, // a luz do tablet atrai: caçando, ela acelera
         aoPisar: (d) => Som.passoMonstro(limitar(1 - d / 18)),
         aoAvistar: () => Som.rugido(),
-      });
+      };
+      for (let i = 0; i < quantidadeMonstros; i++) {
+        if (monstros[i].atualizar(dt, contexto)) { pegou = true; indicePegou = i; }
+      }
 
-      // Presença do monstro: respiração (com lado esquerdo/direito), vinheta e lanterna falhando.
-      const mx = monstro.grupo.position.x - pos.x, mz = monstro.grupo.position.z - pos.z;
-      const dist = Math.hypot(mx, mz) || 1;
+      // Presença das criaturas: a mais perto define som, lado e vinheta; qualquer uma
+      // caçando deixa a respiração aguda.
+      let perto = null, menor = Infinity, cacando = false;
+      for (let i = 0; i < quantidadeMonstros; i++) {
+        const m = monstros[i], p = m.grupo.position;
+        const d = Math.hypot(p.x - pos.x, p.z - pos.z);
+        if (d < menor) { menor = d; perto = p; }
+        if (m.modo === "caca") cacando = true;
+      }
+      const mx = perto.x - pos.x, mz = perto.z - pos.z;
+      const dist = menor || 1;
       proximidade = limitar(1 - dist / 16);
       const lado = (mx * -frente.z + mz * frente.x) / dist; // produto escalar com o vetor "direita"
-      Som.monstro(proximidade, lado, monstro.modo === "caca");
+      Som.monstro(proximidade, lado, cacando);
       Hud.perigo(proximidade * proximidade * (0.75 + 0.25 * Math.sin(relogio * 9)));
     } else {
       // Modo estudo: sem criatura, sem respiração e sem vinheta.
@@ -463,7 +484,7 @@
     if (modoMapa !== "oculto") {
       Minimapa.desenhar($("minimapa"), {
         lab, visto, mundo, e, jogador: pos, frente,
-        monstro: modoEstudo ? null : monstro.grupo.position,
+        monstros: modoEstudo ? null : monstros.slice(0, quantidadeMonstros).map((m) => m.grupo.position),
         tempo: relogio,
         modo: modoMapa,
       });
@@ -472,17 +493,17 @@
     const falha = Math.sin(relogio * 31) * Math.sin(relogio * 4.7) > 0.95 - 0.5 * proximidade;
     lanterna.intensity = apagao ? (falha ? 0.05 : 0.4) : (falha ? 0.45 : 1.5);
 
-    if (pegou) capturado();
+    if (pegou) capturado(indicePegou);
   }
 
   // ---------- Jumpscare ----------
-  function capturado() {
+  function capturado(indice = 0) {
     modo = "susto";
     tempoSusto = 0;
     Hud.tablet(e, false, visao);
     Hud.dica("");
     camera.rotation.x = 0;
-    monstro.encarar(camera);
+    monstros[indice >= 0 && indice < quantidadeMonstros ? indice : 0].encarar(camera);
     lanterna.intensity = 1.0;
     Som.susto();
     Hud.susto(true);
@@ -888,12 +909,14 @@
 
   if (DEMO) { // acesso pelo console para depurar: depurar.e, depurar.lab, depurar.jogador...
     window.depurar = {
-      jogador, monstro, camera, iniciarFase,
+      jogador, camera, iniciarFase,
       get e() { return e; }, get lab() { return lab; }, get mundo() { return mundo; },
       get modo() { return modo; }, get modoEstudo() { return modoEstudo; },
       get melhores() { return melhores; }, get pixel() { return pixel; },
       get modoMapa() { return modoMapa; }, get escSeguro() { return escSeguro; },
       get tabletAberto() { return tabletAberto; },
+      monstros,
+      get quantidadeMonstros() { return quantidadeMonstros; },
     };
   }
 
