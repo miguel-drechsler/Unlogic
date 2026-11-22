@@ -740,8 +740,10 @@
   let pedidoReinicio = -Infinity; // quando foi o primeiro toque
 
   function digito(n) {
-    if (visao.tipo === "terminal") { if (n >= 1 && n <= e.portas.length) acusar(n - 1); return; }
+    // 0 volta à visão geral de qualquer visão do tablet, inclusive do terminal
+    // (onde 1–9 acusam portas): é o que os controles do README prometem.
     if (n === 0) visao = { tipo: "geral" };
+    else if (visao.tipo === "terminal") { if (n >= 1 && n <= e.portas.length) acusar(n - 1); return; }
     else if (n > e.portas.length) return;
     else if (!e.portasVistas.has(n - 1)) return Hud.aviso(`Porta ${n} ainda não foi encontrada.`, "ruim");
     else {
