@@ -23,6 +23,8 @@
  * O caminho é recalculado a cada 0,3 s com Labirinto.caminho (A* no grid).
  * Portas fechadas são paredes para o monstro; abertas viram atalho para ele também.
  * Cada virada errada (Estado.viradasErradas) e cada acusação errada aumenta a velocidade.
+ * Com o tablet aberto, caçando, ela também acelera (GANHO_TABLET): ler as fórmulas tem
+ * risco, e é preciso achar um canto seguro antes. O teto continua abaixo da corrida.
  */
 const Monstro = (() => {
   const J = typeof Jogador !== "undefined" ? Jogador : require("./jogador.js");
@@ -31,6 +33,10 @@ const Monstro = (() => {
   const PACIENCIA = 2;         // ...depois de tantos segundos longe
   const VEL_FURIA = 9;
   const GANHO_PATRULHA = 0.2, GANHO_CACA = 0.4; // m/s a mais por erro do jogador
+  // A luz do tablet atrai: caçando, ela ganha isto enquanto o tablet está aberto (sempre
+  // limitada a `tetoCaca`, que fica abaixo da corrida). Sem isso, quem não erra nunca é
+  // alcançado andando, e o momento de pensar, o coração do jogo, não tinha risco.
+  const GANHO_TABLET = 1.5;
   const ALCANCE = 1.1;         // distância em que ele pega o jogador
 
   // [primeiro andar jogado, último andar]. Cada valor cresce (ou a trégua encolhe) de um ao outro.
@@ -178,11 +184,11 @@ const Monstro = (() => {
 
     function velocidade(c) {
       if (c.furia) return VEL_FURIA;
-      if (modo === "caca") return Math.min(dif.tetoCaca, dif.velCaca + GANHO_CACA * c.erros);
+      if (modo === "caca") return Math.min(dif.tetoCaca, dif.velCaca + GANHO_CACA * c.erros + (c.tablet ? GANHO_TABLET : 0));
       return Math.min(4, dif.velPatrulha + GANHO_PATRULHA * c.erros);
     }
 
-    // c = { lab, passavel(tx,tz), jogador:{x,z}, tileJogador:{x,z}, furia, erros, aoPisar(dist) }
+    // c = { lab, passavel(tx,tz), jogador:{x,z}, tileJogador:{x,z}, furia, erros, tablet, aoPisar(dist) }
     // Devolve true quando o monstro alcança o jogador.
     function atualizar(dt, c) {
       relogio += dt;

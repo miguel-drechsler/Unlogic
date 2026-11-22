@@ -31,7 +31,7 @@ Como as alavancas são compartilhadas, abrir uma porta pode fechar outra — e c
 | E ou clique | virar alavanca / usar terminal |
 | Tab | abrir e fechar o tablet |
 | H | abrir a tabela dos conectivos (ou voltar dela) |
-| R | reiniciar o andar |
+| R (duas vezes) | reiniciar o andar (o que você já encontrou continua no tablet e no minimapa) |
 | M | minimapa: local (gira com você) → completo → oculto |
 | F | tela cheia |
 | K | ligar/desligar o som |
@@ -106,7 +106,7 @@ site zera os recordes.
 | Alavancas | Variáveis proposicionais e valoração |
 | Portas | Avaliação de fórmulas com ¬, ∧, ∨, →, ↔ |
 | Energia limitada → apagão | Obriga a raciocinar antes de mexer: quando a energia não alcança mais nenhuma solução, as luzes apagam e a criatura corre até você |
-| Virada em falso acelera a criatura | Tentativa e erro é punida (em falso = não aproxima de nenhuma solução) |
+| Virada em falso acelera a criatura | Tentativa e erro é punida (em falso = não aproxima de nenhuma solução que ainda caiba na energia; seguir uma rota válida mais longa não é punido) |
 | Terminal "Impossível!" | Identificar **contradições** (errar custa 1 de energia) |
 | Porta sempre aberta (andar −1) | **Tautologia** (silogismo hipotético) |
 | Porta-isca (andar −1) | Parece impossível, mas abre em exatamente uma linha da tabela-verdade |
@@ -140,6 +140,8 @@ Por isso os recordes salvos e o mapa de cada andar continuam valendo.
 - Começa a caçar quando o caminho até você fica curto; caçando, é mais lenta que o seu passo
   normal — até você errar. Cada virada em falso e cada acusação errada a aceleram, mas nem com
   muitos erros ela alcança a sua corrida.
+- **A luz do tablet atrai:** caçando, ela fica 1,5 m/s mais rápida enquanto o tablet está aberto
+  (sempre abaixo do teto, que fica abaixo da sua corrida). Leia as fórmulas num canto seguro.
 - Fica parada alguns segundos no começo do andar. Uma caçada tem duração máxima; depois ela
   cansa, recua e passa um tempo sem caçar.
 - **Fica mais perigosa a cada andar** (`Monstro.dificuldade` em `js/monstro.js`). A ficha do
@@ -163,7 +165,15 @@ Por isso os recordes salvos e o mapa de cada andar continuam valendo.
   Mas virar uma alavanca pode **fechar** uma porta atrás de você — a lógica avisa antes.
 
 ### Pontuação
-100 por andar + 25 por energia que sobrar − 10 por tabela-verdade consultada − 20 por acusação errada.
+100 por andar + até 100 pela **folga de energia preservada** (energia que sobra além do mínimo de
+viradas, proporcional à folga do andar) − 10 por tabela-verdade consultada − 20 por acusação errada.
+Resolver sem desperdício vale 200 em **qualquer** andar: antes (25 × energia restante) o −4 valia
+até 200 e o T, o mais difícil, só 125. Recordes salvos antes dessa mudança seguem a regra antiga.
+
+Ser pego (ou reiniciar com R ou pela pausa) recomeça o puzzle do andar, mas **não apaga o que
+você já descobriu**: alavancas e portas catalogadas e a névoa do minimapa continuam.
+"Recomeçar do andar −4", na tela final, não apaga os recordes. O elevador abre no primeiro
+andar ainda não vencido.
 
 ## Estrutura dos arquivos
 ```
@@ -279,6 +289,9 @@ correções de consistência com o jogo 3D:
 - Manual "Neste andar", diferente para cada andar, no "Como jogar" e na pausa (issue #6).
 - A criatura fica mais perigosa a cada andar (lenta → atenta → implacável), sem passar dos
   limites que mantêm o jogo vencível; um bot confere isso jogando no `?demo` (issue #3).
+- Revisão de jogabilidade: a virada em falso não pune mais rotas válidas (−3); avisos importantes
+  não são apagados por avisos informativos; `R` pede confirmação; ser pego mantém as descobertas;
+  a luz do tablet atrai a criatura; a pontuação máxima é igual em todos os andares.
 
 Nada disso muda o núcleo: as fases continuam sendo resolvidas avaliando fórmulas
 proposicionais sobre as mesmas alavancas compartilhadas.

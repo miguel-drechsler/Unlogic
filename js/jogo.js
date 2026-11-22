@@ -11,7 +11,7 @@
  */
 (() => {
   const PONTOS_BASE = 100;
-  const BONUS_ENERGIA = 25;
+  const BONUS_MAXIMO = 100; // bônus por terminar sem gastar a folga de energia (igual ao 3D)
   const CUSTO_TABELA = 10;
   const CUSTO_ERRO = 20;
 
@@ -107,8 +107,16 @@
     }
   }
 
+  // O bônus mede a FOLGA preservada (energia além do mínimo de viradas), como no 3D
+  // (estado.js): resolver sem desperdício vale o mesmo em toda fase.
+  const folgaDaFase = (fase) => fase.energia - movimentosMinimos(fase);
+  function bonusEnergia() {
+    const folga = folgaDaFase(FASES[estado.indice]);
+    return folga <= 0 ? BONUS_MAXIMO : Math.round(BONUS_MAXIMO * Math.min(1, estado.energia / folga));
+  }
+
   function pontuacaoDaFase() {
-    const p = PONTOS_BASE + BONUS_ENERGIA * estado.energia
+    const p = PONTOS_BASE + bonusEnergia()
       - CUSTO_TABELA * estado.tabelasVistas.size - CUSTO_ERRO * estado.erros;
     return Math.max(10, p);
   }
@@ -291,7 +299,7 @@
       <ul class="provas">${provas}</ul>
       <table class="pontuacao">
         <tr><td>Base</td><td>${PONTOS_BASE}</td></tr>
-        <tr><td>Energia restante (${estado.energia} × ${BONUS_ENERGIA})</td><td>+${BONUS_ENERGIA * estado.energia}</td></tr>
+        <tr><td>Folga de energia preservada (${Math.min(estado.energia, folgaDaFase(FASES[estado.indice]))} de ${folgaDaFase(FASES[estado.indice])})</td><td>+${bonusEnergia()}</td></tr>
         <tr><td>Tabelas consultadas (${estado.tabelasVistas.size} × ${CUSTO_TABELA})</td><td>−${CUSTO_TABELA * estado.tabelasVistas.size}</td></tr>
         <tr><td>Acusações erradas (${estado.erros} × ${CUSTO_ERRO})</td><td>−${CUSTO_ERRO * estado.erros}</td></tr>
         <tr class="soma"><td>Pontos da fase</td><td>${pts}</td></tr>
@@ -317,7 +325,7 @@
 
   function mostrarFinal() {
     const feitas = melhores.filter((p) => p !== null).length;
-    const maximo = FASES.reduce((s, f) => s + PONTOS_BASE + BONUS_ENERGIA * (f.energia - movimentosMinimos(f)), 0);
+    const maximo = FASES.length * (PONTOS_BASE + BONUS_MAXIMO);
     janela("Laboratório concluído!", `
       <p>Fases concluídas: <b>${feitas} de ${FASES.length}</b></p>
       <p>Pontuação total: <b class="destaque">${total()}</b> de ${maximo} possíveis.</p>

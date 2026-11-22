@@ -23,7 +23,7 @@ const Menus = (() => {
     [["E"], "virar alavanca ou usar o terminal (o clique também serve)"],
     [["Tab"], "abrir o tablet com as portas encontradas"],
     [["H"], "tabela dos conectivos no tablet"],
-    [["R"], "reiniciar o andar na hora"],
+    [["R"], "reiniciar o andar (aperte duas vezes)"],
     [["M"], "minimapa: local (gira com você), completo ou oculto"],
     [["K"], "ligar ou desligar o som"],
     [["F"], "tela cheia"],

@@ -46,11 +46,18 @@ const Hud = (() => {
    *   passou      : ms desde que `atual` apareceu
    * Devolva true para interromper já, false para enfileirar.
    *
-   * TODO(você): esta é a política de prioridade dos avisos. Hoje devolve sempre true
-   * (o comportamento antigo, que deixa um aviso importante ser apagado na hora).
+   * Política: enfileirar é barato (a fila troca de aviso a cada MINIMO ms), então só
+   * interrompe na hora quando um aviso IMPORTANTE chega sobre um INFORMATIVO.
+   *   - informativo nunca apaga importante ("A criatura te pegou" não some sob
+   *     "Porta 7 catalogada", que chega no quadro seguinte ao renascer);
+   *   - importante sobre importante espera o MINIMO, para dar tempo de ler o primeiro;
+   *   - informativo sobre informativo também espera: catalogar duas coisas no mesmo
+   *     passo mostra as duas, uma depois da outra.
+   * `passou` é usado só pelo caso importante-sobre-importante.
    */
   function deveInterromper(atual, novo, passou) {
-    return true;
+    if (!atual.tipo) return !!novo.tipo;          // atual informativo: só o importante fura
+    return !!novo.tipo && passou >= MINIMO;      // atual importante: só outro, e já lido
   }
 
   function mostrarAviso(a) {
@@ -73,8 +80,16 @@ const Hud = (() => {
     $("aviso").className = "";
   }
 
-  function aviso(texto, tipo = "") {
-    const novo = { texto, tipo };
+  // chave (opcional): avisos de alternância ("minimapa", "som"...). Um aviso novo com a
+  // mesma chave substitui o anterior, na tela ou na fila: apertar M três vezes mostra só
+  // o modo final, em vez de enfileirar três mensagens que já ficaram velhas.
+  function aviso(texto, tipo = "", chave = null) {
+    const novo = { texto, tipo, chave };
+    if (chave) {
+      const k = fila.findIndex((a) => a.chave === chave);
+      if (k >= 0) fila.splice(k, 1);
+      if (atual && atual.chave === chave) return mostrarAviso(novo);
+    }
     if (!atual || deveInterromper(atual, novo, performance.now() - atual.desde)) return mostrarAviso(novo);
     if (fila.some((a) => a.texto === texto)) return; // repetido: não enfileira de novo
     fila.push(novo);
@@ -226,6 +241,7 @@ const Hud = (() => {
         <p class="nota">¬ não · ∧ e · ∨ ou · → se...então · ↔ se e somente se<br>
         A saída só libera com <b>todas</b> as portas abertas ou seladas ao mesmo tempo.
         O botão “Impossível!” fica no terminal verde do andar.<br>
+        A luz do tablet atrai a criatura: leia as fórmulas num canto seguro.<br>
         Se precisar recomeçar o andar, aperte <b>R</b>.</p>`;
     }
   }

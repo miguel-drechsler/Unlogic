@@ -17,7 +17,7 @@ const Estado = (() => {
   const L = typeof Logica !== "undefined" ? Logica : require("./logica.js");
 
   const PONTOS_BASE = 100;
-  const BONUS_ENERGIA = 25;
+  const BONUS_MAXIMO = 100; // bônus por terminar sem gastar a folga de energia
   const CUSTO_TABELA = 10;
   const CUSTO_ERRO = 20;
 
@@ -82,24 +82,26 @@ const Estado = (() => {
       .filter((i) => i >= 0);
   }
 
-  function retrato(e) {
-    return {
-      abertas: e.portas.filter((_, i) => portaResolvida(e, i)).length,
-      distancia: distanciaDaSolucao(e),
-    };
-  }
-
   /*
    * O que conta como uma virada "errada" (a que deixa o monstro mais rápido)?
    *
-   * Errada = não aproximou o jogador de nenhuma solução. Usamos a distância até a
-   * solução mais próxima, e não o número de portas abertas, porque um passo certo
-   * pode fechar portas pelo caminho (ex.: A ∧ B só abre na segunda virada).
+   * Errada = não aproximou o jogador de NENHUMA solução que ainda caiba na energia.
+   * Não usamos o número de portas abertas, porque um passo certo pode fechar portas
+   * pelo caminho (ex.: A ∧ B só abre na segunda virada). E não usamos só a solução
+   * MAIS PRÓXIMA: no andar −3 há várias saídas, e quem segue uma rota mais longa (mas
+   * possível) estaria raciocinando certo e seria punido.
    *
-   *   antes, depois : { abertas, distancia }
+   * Virar `nome` muda a distância até cada solução em exatamente ±1. Então a virada
+   * aproximou de uma solução s quando s[nome] é o novo valor; e s ainda cabe quando a
+   * distância até ela, já depois da virada, não passa da energia que sobrou.
+   *
+   *   e    : estado JÁ DEPOIS da virada (valores e energia atualizados)
+   *   nome : a alavanca que acabou de ser virada
    */
-  function viradaFoiErrada(antes, depois) {
-    return depois.distancia >= antes.distancia;
+  function viradaFoiErrada(e, nome) {
+    const nomes = Object.keys(e.valores);
+    const distancia = (s) => nomes.filter((n) => s[n] !== e.valores[n]).length;
+    return !e.solucoes.some((s) => s[nome] === e.valores[nome] && distancia(s) <= e.energia);
   }
 
   // ---------- Jogadas ----------
@@ -110,10 +112,9 @@ const Estado = (() => {
     const agora = situacao(e);
     if (agora === "vitoria") return { ok: false, motivo: "vitoria" };
     if (e.energia <= 0 || agora === "apagao") return { ok: false, motivo: "sem-energia" };
-    const antes = retrato(e);
     e.valores[nome] = !e.valores[nome];
     e.energia--;
-    const errada = viradaFoiErrada(antes, retrato(e));
+    const errada = viradaFoiErrada(e, nome);
     if (errada) e.viradasErradas++;
     return { ok: true, errada, valor: e.valores[nome] };
   }
@@ -152,25 +153,38 @@ const Estado = (() => {
     return "jogando";
   }
 
-  // ---------- Pontuação (igual à do jogo 2D) ----------
+  // ---------- Pontuação ----------
+  // O bônus mede a FOLGA preservada (energia além do mínimo de viradas), não a energia
+  // bruta. Antes era 25 × energia restante, e os andares fáceis (folga 4) valiam até 200
+  // enquanto o T, o mais difícil (folga 1), valia no máximo 125. Agora todo andar
+  // resolvido sem desperdício vale o mesmo: PONTOS_BASE + BONUS_MAXIMO.
+  function folgaDaFase(fase) {
+    const minimo = Math.min(...solucoes(fase).map((s) =>
+      Object.keys(s).filter((n) => s[n] !== fase.alavancas[n]).length));
+    return fase.energia - minimo;
+  }
+
+  // Ao vencer, a energia restante nunca passa da folga (gastou pelo menos o mínimo).
+  function bonusEnergia(e) {
+    const folga = folgaDaFase(e.fase);
+    if (folga <= 0) return BONUS_MAXIMO; // andar sem folga: vencer já é perfeito
+    return Math.round(BONUS_MAXIMO * Math.min(1, e.energia / folga));
+  }
+
   function pontuacao(e) {
-    const p = PONTOS_BASE + BONUS_ENERGIA * e.energia
+    const p = PONTOS_BASE + bonusEnergia(e)
       - CUSTO_TABELA * e.tabelasVistas.size - CUSTO_ERRO * e.erros;
     return Math.max(10, p);
   }
 
-  function pontuacaoMaxima(fase) {
-    const minimo = Math.min(...solucoes(fase).map((s) =>
-      Object.keys(s).filter((n) => s[n] !== fase.alavancas[n]).length));
-    return PONTOS_BASE + BONUS_ENERGIA * (fase.energia - minimo);
-  }
+  const pontuacaoMaxima = () => PONTOS_BASE + BONUS_MAXIMO;
 
   return {
     criar, virar, acusar, verTabela, situacao, venceu,
     portaAberta, portaResolvida, situacaoPorta, distanciaDaSolucao,
     portasComVariavel,
-    pontuacao, pontuacaoMaxima,
-    PONTOS_BASE, BONUS_ENERGIA, CUSTO_TABELA, CUSTO_ERRO,
+    pontuacao, pontuacaoMaxima, bonusEnergia, folgaDaFase,
+    PONTOS_BASE, BONUS_MAXIMO, CUSTO_TABELA, CUSTO_ERRO,
   };
 })();
 

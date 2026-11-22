@@ -5,7 +5,9 @@
  * Para cada fase confere que:
  *   - o caminho ótimo vence, sem nenhuma virada contada como errada;
  *   - a vitória só vem depois de selar as contradições no terminal;
- *   - toda virada que afasta da solução é contada como errada;
+ *   - o caminho ótimo faz a pontuação máxima (igual em todos os andares);
+ *   - uma virada só é errada se não aproxima de NENHUMA solução que caiba na energia,
+ *     e toda rota que cabe na energia (não só a mais curta) vence sem viradas em falso;
  *   - acusar uma porta que não é contradição custa 1 de energia;
  *   - gastar energia demais causa o apagão na hora (o andar não fica sem saída em silêncio).
  */
@@ -40,13 +42,27 @@ FASES.forEach((fase, i) => {
   console.log(`  ótimo: virar ${viradas.join(", ")}${contradicoes.length ? " e selar " + contradicoes.map((k) => k + 1).join(", ") : ""}` +
     ` -> ${Estado.pontuacao(e)} pontos, ${e.energia} de energia sobrando`);
 
-  // 2. Cada virada que afasta da solução é errada; cada uma que aproxima, não.
+  conferir(Estado.pontuacao(e) === Estado.pontuacaoMaxima(fase), "o caminho ótimo não fez a pontuação máxima");
+
+  // 2. Errada = não aproxima de NENHUMA solução que ainda caiba na energia.
   livres.forEach((n) => {
     e = Estado.criar(fase, i);
-    const antes = Estado.distanciaDaSolucao(e);
     const r = Estado.virar(e, n);
-    conferir(r.errada === (Estado.distanciaDaSolucao(e) >= antes), `classificação da virada inicial de ${n}`);
+    const aproxima = e.solucoes.some((s) => s[n] === e.valores[n] && diferencas(e, s).length <= e.energia);
+    conferir(r.errada === !aproxima, `classificação da virada inicial de ${n}`);
   });
+
+  // 2b. Toda rota que cabe na energia vence sem nenhuma virada em falso, não só a mais curta
+  //     (o andar −3 tem várias saídas; seguir uma mais longa é raciocinar certo).
+  let rotas = 0;
+  Estado.criar(fase, i).solucoes.forEach((s) => {
+    e = Estado.criar(fase, i);
+    const lista = diferencas(e, s);
+    if (lista.length > fase.energia) return;
+    rotas++;
+    lista.forEach((n) => conferir(!Estado.virar(e, n).errada, `rota ${lista.join("")}: virar ${n} contou como em falso`));
+  });
+  if (rotas > 1) console.log(`  ${rotas} rotas cabem na energia, todas sem viradas em falso`);
   fase.presas.forEach((n) => conferir(!Estado.virar(Estado.criar(fase, i), n).ok, `alavanca presa ${n} virou`));
 
   // 3. Acusação errada custa energia e não sela.

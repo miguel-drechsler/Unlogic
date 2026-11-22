@@ -152,8 +152,20 @@
       teste(`fase ${i + 1}: o caminho ótimo vence sem viradas falsas`,
         todasBoas && Estado.situacao(e) === "vitoria",
         `situação: ${Estado.situacao(e)}`);
+      teste(`fase ${i + 1}: o caminho ótimo faz a pontuação máxima (${Estado.pontuacaoMaxima(fase)})`,
+        Estado.pontuacao(e) === Estado.pontuacaoMaxima(fase), `fez ${Estado.pontuacao(e)}`);
       teste(`fase ${i + 1}: depois da vitória as alavancas travam`,
         !Estado.virar(e, livres[0]).ok);
+
+      // Toda rota que cabe na energia vence sem viradas em falso, não só a mais curta.
+      let rotasBoas = true;
+      Estado.criar(fase, i).solucoes.forEach((s) => {
+        const r = Estado.criar(fase, i);
+        const lista = nomes.filter((n) => s[n] !== r.valores[n]);
+        if (lista.length > fase.energia) return;
+        lista.forEach((n) => { if (Estado.virar(r, n).errada) rotasBoas = false; });
+      });
+      teste(`fase ${i + 1}: nenhuma rota possível conta viradas em falso`, rotasBoas);
 
       // Dependências: portasComVariavel concorda com o parser.
       const depsOk = nomes.every((n) => {

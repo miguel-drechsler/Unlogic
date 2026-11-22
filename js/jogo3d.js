@@ -102,7 +102,7 @@
     modoMapa = lista[(lista.indexOf(modoMapa) + 1) % lista.length];
     mostrarMapa();
     salvarProgresso();
-    Hud.aviso(NOME_MAPA[modoMapa]);
+    Hud.aviso(NOME_MAPA[modoMapa], "", "minimapa");
   }
 
   // Reflete as preferências nas Opções (início e pausa) e no HUD.
@@ -178,10 +178,22 @@
     atualizarOpcoes();
   });
 
-  function iniciarFase(indice) {
+  // manterDescobertas: ao recomeçar o MESMO andar (captura, R, "Reiniciar andar"), o que
+  // o jogador já encontrou continua no tablet e no minimapa. O conhecimento é dele; só o
+  // puzzle (alavancas, energia, selos, tabelas consultadas) volta ao início. Sem isso,
+  // cada captura obrigava a reexplorar o labirinto inteiro: tédio, não medo.
+  // O mapa é o mesmo (mesma semente), então a névoa do minimapa pode ser copiada.
+  function iniciarFase(indice, manterDescobertas = false) {
+    const antes = manterDescobertas && e && e.indice === indice
+      ? { alavancas: e.alavancasVistas, portas: e.portasVistas, visto }
+      : null;
     if (mundo) mundo.descartar();
     const fase = FASES[indice];
     e = Estado.criar(fase, indice);
+    if (antes) {
+      e.alavancasVistas = new Set(antes.alavancas);
+      e.portasVistas = new Set(antes.portas);
+    }
     lab = Labirinto.paraFase(fase, indice);
     mundo = Mundo.construir(cena, lab, e);
 
@@ -192,7 +204,8 @@
     jogador.posicionar(centro(lab.inicio.x), centro(lab.inicio.z), guinadaInicial);
     monstro.reposicionar(lab.monstro, Monstro.dificuldade(indice, FASES.length)); // cresce a cada andar
 
-    visto = Minimapa.novaVisao(lab);
+    visto = Minimapa.novaVisao(lab); // visão nova (a camada desenhada do minimapa é por visão)...
+    if (antes) visto.set(antes.visto); // ...com os tiles que já tinham sido vistos
     ultimoTile = -1;
     apagao = false;
     saidaLiberada = false;
@@ -416,6 +429,7 @@
         tileJogador: tileAlvo(tx, tz),
         furia: apagao,
         erros: e.viradasErradas + e.erros,
+        tablet: tabletAberto, // a luz do tablet atrai: caçando, ela acelera
         aoPisar: (d) => Som.passoMonstro(limitar(1 - d / 18)),
         aoAvistar: () => Som.rugido(),
       });
@@ -468,10 +482,10 @@
     camera.rotation.z = 0;
     Hud.susto(false);
     const semEnergia = apagao;
-    iniciarFase(e.indice);
+    iniciarFase(e.indice, true);
     Hud.aviso(semEnergia
       ? "Sem energia, no escuro, ele te achou. Pense antes de virar cada alavanca."
-      : "A criatura te pegou. O andar foi reiniciado.", "ruim");
+      : "A criatura te pegou. O andar recomeçou, mas o que você encontrou continua no tablet.", "ruim");
     if (controles.isLocked || semTrava || DEMO) modo = "jogando";
     else pausar();
   }
@@ -495,7 +509,8 @@
     const provas = e.portas.map((p, i) => e.seladas.has(i)
       ? `<li>Porta ${i + 1}: contradição — selada</li>`
       : `<li>Porta ${i + 1}: ${Logica.paraTexto(p.arvore, (n) => VF(e.valores[n]))} = <b class="v">V</b></li>`).join("");
-    const { PONTOS_BASE, BONUS_ENERGIA, CUSTO_TABELA, CUSTO_ERRO } = Estado;
+    const { PONTOS_BASE, CUSTO_TABELA, CUSTO_ERRO } = Estado;
+    const folga = Estado.folgaDaFase(e.fase);
     const ultima = e.indice === FASES.length - 1;
     const repetir = ["Jogar este andar de novo", () => { iniciarFase(e.indice); entrar(); }];
     const menu = ["Menu principal", voltarAoMenu];
@@ -511,7 +526,7 @@
         <ul class="provas">${provas}</ul>
         <table class="pontuacao">
           <tr><td>Base</td><td>${PONTOS_BASE}</td></tr>
-          <tr><td>Energia restante (${e.energia} × ${BONUS_ENERGIA})</td><td>+${BONUS_ENERGIA * e.energia}</td></tr>
+          <tr><td>Folga de energia preservada (${Math.min(e.energia, folga)} de ${folga})</td><td>+${Estado.bonusEnergia(e)}</td></tr>
           <tr><td>Tabelas consultadas (${e.tabelasVistas.size} × ${CUSTO_TABELA})</td><td>−${CUSTO_TABELA * e.tabelasVistas.size}</td></tr>
           <tr><td>Acusações erradas (${e.erros} × ${CUSTO_ERRO})</td><td>−${CUSTO_ERRO * e.erros}</td></tr>
           <tr class="soma"><td>Pontos do andar</td><td>${pts}</td></tr>
@@ -533,7 +548,8 @@
         <p>Pontuação máxima = resolver cada andar com o mínimo de viradas, sem tabelas e sem
         acusações erradas: só raciocínio lógico.</p>`,
       botoes: [
-        [`Recomeçar do andar ${nomeDoAndar(0)}`, () => { melhores.fill(null); salvarProgresso(); iniciarFase(0); entrar(); }],
+        // Recomeçar a subida NÃO apaga os recordes: eles são o histórico do jogador.
+        [`Recomeçar do andar ${nomeDoAndar(0)}`, () => { iniciarFase(0); entrar(); }],
         ["Menu principal", voltarAoMenu],
       ],
     });
@@ -672,7 +688,7 @@
     jogar,
     escolherAndar,
     continuar: entrar,
-    reiniciar: () => { iniciarFase(e.indice); entrar(); },
+    reiniciar: () => { iniciarFase(e.indice, true); entrar(); },
     sairParaMenu: voltarAoMenu,
     mudarOpcao: aplicarOpcoes,
   }, opcoes);
@@ -717,6 +733,9 @@
   });
 
   // ---------- Teclado e mouse ----------
+  const CONFIRMA_R = 2500;        // ms para o segundo toque no R
+  let pedidoReinicio = -Infinity; // quando foi o primeiro toque
+
   function digito(n) {
     if (visao.tipo === "terminal") { if (n >= 1 && n <= e.portas.length) acusar(n - 1); return; }
     if (n === 0) visao = { tipo: "geral" };
@@ -757,14 +776,22 @@
       }
       Hud.tablet(e, tabletAberto, visao);
     } else if (ev.code === "KeyR") {
-      // Reinício rápido do andar: útil no modo estudo e depois de um apagão.
-      iniciarFase(e.indice);
-      Hud.aviso("Andar reiniciado. A mesma valoração inicial de sempre.", "");
+      // Reinício rápido do andar: útil no modo estudo e depois de um apagão. O R fica
+      // ao lado do E (interagir), então pede um segundo toque, como o botão da pausa.
+      // Depois do apagão não há o que perder: reinicia direto.
+      const agora = performance.now();
+      if (!apagao && agora - pedidoReinicio > CONFIRMA_R) {
+        pedidoReinicio = agora;
+        return void Hud.aviso("Aperte R de novo para reiniciar o andar (as alavancas e a energia voltam ao início).", "ruim");
+      }
+      pedidoReinicio = -Infinity;
+      iniciarFase(e.indice, true);
+      Hud.aviso("Andar reiniciado. O que você já tinha encontrado continua no tablet.", "");
     } else if (ev.code === "KeyK") {
       mudo = Som.alternarMudo();
       atualizarOpcoes();
       salvarProgresso();
-      Hud.aviso(mudo ? "Som desligado." : "Som ligado.", "");
+      Hud.aviso(mudo ? "Som desligado." : "Som ligado.", "", "som");
     } else if (ev.code === "KeyM") {
       alternarMapa();
     } else if (ev.code === "KeyE") {
@@ -843,13 +870,16 @@
       get modo() { return modo; }, get modoEstudo() { return modoEstudo; },
       get melhores() { return melhores; }, get pixel() { return pixel; },
       get modoMapa() { return modoMapa; }, get escSeguro() { return escSeguro; },
+      get tabletAberto() { return tabletAberto; },
     };
   }
 
   aplicarOpcoes(); // sensibilidade, volume e som salvos; sincroniza Opções e o HUD
   mostrarMapa();
-  // O elevador sempre abre no andar mais fundo (−4), o primeiro da subida.
-  iniciarFase(0);
+  // O elevador abre no primeiro andar ainda não vencido: quem volta ao jogo continua de
+  // onde parou. Jogador novo (ou quem já venceu todos) começa no mais fundo (−4).
+  const primeiroPendente = melhores.findIndex((p) => p === null);
+  iniciarFase(primeiroPendente >= 0 ? primeiroPendente : 0);
   Menus.inicio(true);
   requestAnimationFrame(quadro);
 })();
